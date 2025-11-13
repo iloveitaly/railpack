@@ -150,14 +150,21 @@ func (p *PythonProvider) InstallUv(ctx *generate.GenerateContext, install *gener
 	install.AddEnvVars(p.GetPythonEnvVars(ctx))
 
 	p.copyInstallFiles(ctx, install)
-	install.AddCommands([]plan.Command{
+	installCommands := []plan.Command{
 		plan.NewPathCommand(LOCAL_BIN_PATH),
 		plan.NewPathCommand(VENV_PATH + "/bin"),
 		// if we exclude workspace packages, uv.lock will fail the frozen test and the user will get an error
 		// to avoid this, we (a) detect if workspace packages are required (b) if they aren't, we don't include project
 		// source in order to optimize layer caching (c) install project in the build phase.
 		plan.NewExecCommand("uv sync --locked --no-dev --no-install-project"),
-	})
+	}
+
+	if p.usesDep(ctx, "playwright") {
+		ctx.Logger.LogInfo("Installing Playwright browsers")
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install --with-deps"))
+	}
+
+	install.AddCommands(installCommands)
 
 	return []string{VENV_PATH}
 }
@@ -190,6 +197,11 @@ func (p *PythonProvider) InstallPipenv(ctx *generate.GenerateContext, install *g
 		})
 	}
 
+	if p.usesDep(ctx, "playwright") {
+		ctx.Logger.LogInfo("Installing Playwright browsers")
+		install.AddCommand(plan.NewExecCommand("playwright install --with-deps"))
+	}
+
 	return []string{VENV_PATH}
 }
 
@@ -202,11 +214,18 @@ func (p *PythonProvider) InstallPDM(ctx *generate.GenerateContext, install *gene
 	})
 
 	p.copyInstallFiles(ctx, install)
-	install.AddCommands([]plan.Command{
+	installCommands := []plan.Command{
 		plan.NewPathCommand(LOCAL_BIN_PATH),
 		plan.NewPathCommand(VENV_PATH + "/bin"),
 		plan.NewExecCommand("pdm install --check --prod --no-editable"),
-	})
+	}
+
+	if p.usesDep(ctx, "playwright") {
+		ctx.Logger.LogInfo("Installing Playwright browsers")
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install --with-deps"))
+	}
+
+	install.AddCommands(installCommands)
 
 	return []string{VENV_PATH}
 }
@@ -222,11 +241,18 @@ func (p *PythonProvider) InstallPoetry(ctx *generate.GenerateContext, install *g
 	})
 
 	p.copyInstallFiles(ctx, install)
-	install.AddCommands([]plan.Command{
+	installCommands := []plan.Command{
 		plan.NewPathCommand(LOCAL_BIN_PATH),
 		plan.NewPathCommand(VENV_PATH + "/bin"),
 		plan.NewExecCommand("poetry install --no-interaction --no-ansi --only main --no-root"),
-	})
+	}
+
+	if p.usesDep(ctx, "playwright") {
+		ctx.Logger.LogInfo("Installing Playwright browsers")
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install --with-deps"))
+	}
+
+	install.AddCommands(installCommands)
 
 	return []string{VENV_PATH}
 }
@@ -249,6 +275,11 @@ func (p *PythonProvider) InstallPip(ctx *generate.GenerateContext, install *gene
 	install.AddCommands([]plan.Command{
 		plan.NewExecCommand("pip install -r requirements.txt"),
 	})
+
+	if p.usesDep(ctx, "playwright") {
+		ctx.Logger.LogInfo("Installing Playwright browsers")
+		install.AddCommand(plan.NewExecCommand("playwright install --with-deps"))
+	}
 
 	return []string{VENV_PATH}
 }
