@@ -2,8 +2,7 @@
 name = "python-playwright"
 version = "0.1.0"
 description = "Python Playwright example"
-readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "playwright>=1.49.0",
+    "playwright>=1.49",
 ]
