@@ -160,8 +160,9 @@ func (p *PythonProvider) InstallUv(ctx *generate.GenerateContext, install *gener
 	}
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers")
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install --with-deps"))
+		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install"))
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install-deps"))
 	}
 
 	install.AddCommands(installCommands)
@@ -198,8 +199,9 @@ func (p *PythonProvider) InstallPipenv(ctx *generate.GenerateContext, install *g
 	}
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers")
-		install.AddCommand(plan.NewExecCommand("playwright install --with-deps"))
+		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
+		install.AddCommand(plan.NewExecCommand("playwright install"))
+		install.AddCommand(plan.NewExecCommand("playwright install-deps"))
 	}
 
 	return []string{VENV_PATH}
@@ -221,8 +223,9 @@ func (p *PythonProvider) InstallPDM(ctx *generate.GenerateContext, install *gene
 	}
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers")
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install --with-deps"))
+		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install"))
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install-deps"))
 	}
 
 	install.AddCommands(installCommands)
@@ -248,8 +251,9 @@ func (p *PythonProvider) InstallPoetry(ctx *generate.GenerateContext, install *g
 	}
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers")
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install --with-deps"))
+		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install"))
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install-deps"))
 	}
 
 	install.AddCommands(installCommands)
@@ -277,8 +281,9 @@ func (p *PythonProvider) InstallPip(ctx *generate.GenerateContext, install *gene
 	})
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers")
-		install.AddCommand(plan.NewExecCommand("playwright install --with-deps"))
+		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
+		install.AddCommand(plan.NewExecCommand("playwright install"))
+		install.AddCommand(plan.NewExecCommand("playwright install-deps"))
 	}
 
 	return []string{VENV_PATH}
