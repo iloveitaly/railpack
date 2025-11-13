@@ -159,8 +159,12 @@ func (p *PythonProvider) InstallUv(ctx *generate.GenerateContext, install *gener
 		plan.NewExecCommand("uv sync --locked --no-dev --no-install-project"),
 	}
 
+	// Note: playwright install appears in each package manager's install function because only ONE
+	// package manager is detected and used per build. This code runs once, not multiple times.
 	if p.usesDep(ctx, "playwright") {
 		ctx.Logger.LogInfo("Installing Playwright chromium browser")
+		// 'playwright install chromium' installs only the chromium browser (not firefox/webkit)
+		// Chromium runs in headless mode by default when launched with headless=True in code
 		installCommands = append(installCommands, plan.NewExecCommand("playwright install chromium"))
 	}
 
@@ -569,9 +573,12 @@ var pythonBuildDepRequirements = map[string][]string{
 }
 
 var pythonRuntimeDepRequirements = map[string][]string{
-	"pycairo":    {"libcairo2"},
-	"pdf2image":  {"poppler-utils"},
-	"pydub":      {"ffmpeg"},
-	"pymovie":    {"ffmpeg", "qt5-qmake", "qtbase5-dev", "qtbase5-dev-tools", "qttools5-dev-tools", "libqt5core5a", "python3-pyqt5"},
+	"pycairo":   {"libcairo2"},
+	"pdf2image": {"poppler-utils"},
+	"pydub":     {"ffmpeg"},
+	"pymovie":   {"ffmpeg", "qt5-qmake", "qtbase5-dev", "qtbase5-dev-tools", "qttools5-dev-tools", "libqt5core5a", "python3-pyqt5"},
+	// Playwright runtime dependencies for Chromium browser
+	// To find the latest list: run `playwright install-deps chromium` and inspect the apt-get install output
+	// Or check: https://github.com/microsoft/playwright/blob/main/packages/playwright-core/browsers.json
 	"playwright": {"libglib2.0-0", "libatk1.0-0", "libatk-bridge2.0-0", "libcups2", "libxkbcommon0", "libatspi2.0-0", "libxcomposite1", "libxdamage1", "libxfixes3", "libxrandr2", "libgbm1", "libcairo2", "libpango-1.0-0", "libasound2"},
 }
