@@ -18,6 +18,7 @@ const (
 	PIP_CACHE_DIR          = "/opt/pip-cache"
 	VENV_PATH              = "/app/.venv"
 	LOCAL_BIN_PATH         = "/root/.local/bin"
+	PLAYWRIGHT_CACHE_DIR   = "/root/.cache/ms-playwright"
 )
 
 type PythonProvider struct{}
@@ -170,7 +171,12 @@ func (p *PythonProvider) InstallUv(ctx *generate.GenerateContext, install *gener
 
 	install.AddCommands(installCommands)
 
-	return []string{VENV_PATH}
+	outputs := []string{VENV_PATH}
+	if p.usesDep(ctx, "playwright") {
+		// Include Playwright browser cache so browsers are available in deploy stage
+		outputs = append(outputs, PLAYWRIGHT_CACHE_DIR)
+	}
+	return outputs
 }
 
 func (p *PythonProvider) InstallPipenv(ctx *generate.GenerateContext, install *generate.CommandStepBuilder) []string {
@@ -206,7 +212,11 @@ func (p *PythonProvider) InstallPipenv(ctx *generate.GenerateContext, install *g
 		install.AddCommand(plan.NewExecCommand("playwright install chromium"))
 	}
 
-	return []string{VENV_PATH}
+	outputs := []string{VENV_PATH}
+	if p.usesDep(ctx, "playwright") {
+		outputs = append(outputs, PLAYWRIGHT_CACHE_DIR)
+	}
+	return outputs
 }
 
 func (p *PythonProvider) InstallPDM(ctx *generate.GenerateContext, install *generate.CommandStepBuilder) []string {
@@ -231,7 +241,11 @@ func (p *PythonProvider) InstallPDM(ctx *generate.GenerateContext, install *gene
 
 	install.AddCommands(installCommands)
 
-	return []string{VENV_PATH}
+	outputs := []string{VENV_PATH}
+	if p.usesDep(ctx, "playwright") {
+		outputs = append(outputs, PLAYWRIGHT_CACHE_DIR)
+	}
+	return outputs
 }
 
 func (p *PythonProvider) InstallPoetry(ctx *generate.GenerateContext, install *generate.CommandStepBuilder) []string {
@@ -258,7 +272,11 @@ func (p *PythonProvider) InstallPoetry(ctx *generate.GenerateContext, install *g
 
 	install.AddCommands(installCommands)
 
-	return []string{VENV_PATH}
+	outputs := []string{VENV_PATH}
+	if p.usesDep(ctx, "playwright") {
+		outputs = append(outputs, PLAYWRIGHT_CACHE_DIR)
+	}
+	return outputs
 }
 
 func (p *PythonProvider) InstallPip(ctx *generate.GenerateContext, install *generate.CommandStepBuilder) []string {
@@ -285,7 +303,11 @@ func (p *PythonProvider) InstallPip(ctx *generate.GenerateContext, install *gene
 		install.AddCommand(plan.NewExecCommand("playwright install chromium"))
 	}
 
-	return []string{VENV_PATH}
+	outputs := []string{VENV_PATH}
+	if p.usesDep(ctx, "playwright") {
+		outputs = append(outputs, PLAYWRIGHT_CACHE_DIR)
+	}
+	return outputs
 }
 
 func (p *PythonProvider) AddRuntimeDeps(ctx *generate.GenerateContext) {
