@@ -160,9 +160,8 @@ func (p *PythonProvider) InstallUv(ctx *generate.GenerateContext, install *gener
 	}
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install"))
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install-deps"))
+		ctx.Logger.LogInfo("Installing Playwright chromium browser")
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install chromium"))
 	}
 
 	install.AddCommands(installCommands)
@@ -199,9 +198,8 @@ func (p *PythonProvider) InstallPipenv(ctx *generate.GenerateContext, install *g
 	}
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
-		install.AddCommand(plan.NewExecCommand("playwright install"))
-		install.AddCommand(plan.NewExecCommand("playwright install-deps"))
+		ctx.Logger.LogInfo("Installing Playwright chromium browser")
+		install.AddCommand(plan.NewExecCommand("playwright install chromium"))
 	}
 
 	return []string{VENV_PATH}
@@ -223,9 +221,8 @@ func (p *PythonProvider) InstallPDM(ctx *generate.GenerateContext, install *gene
 	}
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install"))
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install-deps"))
+		ctx.Logger.LogInfo("Installing Playwright chromium browser")
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install chromium"))
 	}
 
 	install.AddCommands(installCommands)
@@ -251,9 +248,8 @@ func (p *PythonProvider) InstallPoetry(ctx *generate.GenerateContext, install *g
 	}
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install"))
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install-deps"))
+		ctx.Logger.LogInfo("Installing Playwright chromium browser")
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install chromium"))
 	}
 
 	install.AddCommands(installCommands)
@@ -281,9 +277,8 @@ func (p *PythonProvider) InstallPip(ctx *generate.GenerateContext, install *gene
 	})
 
 	if p.usesDep(ctx, "playwright") {
-		ctx.Logger.LogInfo("Installing Playwright browsers and dependencies")
-		install.AddCommand(plan.NewExecCommand("playwright install"))
-		install.AddCommand(plan.NewExecCommand("playwright install-deps"))
+		ctx.Logger.LogInfo("Installing Playwright chromium browser")
+		install.AddCommand(plan.NewExecCommand("playwright install chromium"))
 	}
 
 	return []string{VENV_PATH}
@@ -574,8 +569,9 @@ var pythonBuildDepRequirements = map[string][]string{
 }
 
 var pythonRuntimeDepRequirements = map[string][]string{
-	"pycairo":   {"libcairo2"},
-	"pdf2image": {"poppler-utils"},
-	"pydub":     {"ffmpeg"},
-	"pymovie":   {"ffmpeg", "qt5-qmake", "qtbase5-dev", "qtbase5-dev-tools", "qttools5-dev-tools", "libqt5core5a", "python3-pyqt5"},
+	"pycairo":    {"libcairo2"},
+	"pdf2image":  {"poppler-utils"},
+	"pydub":      {"ffmpeg"},
+	"pymovie":    {"ffmpeg", "qt5-qmake", "qtbase5-dev", "qtbase5-dev-tools", "qttools5-dev-tools", "libqt5core5a", "python3-pyqt5"},
+	"playwright": {"libglib2.0-0", "libatk1.0-0", "libatk-bridge2.0-0", "libcups2", "libxkbcommon0", "libatspi2.0-0", "libxcomposite1", "libxdamage1", "libxfixes3", "libxrandr2", "libgbm1", "libcairo2", "libpango-1.0-0", "libasound2"},
 }
