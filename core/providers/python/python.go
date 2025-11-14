@@ -602,5 +602,5 @@ var pythonRuntimeDepRequirements = map[string][]string{
 	// Playwright runtime dependencies for Chromium browser
 	// To find the latest list: run `playwright install-deps chromium` and inspect the apt-get install output
 	// Or check: https://github.com/microsoft/playwright/blob/main/packages/playwright-core/browsers.json
-	"playwright": {"libglib2.0-0", "libatk1.0-0", "libatk-bridge2.0-0", "libcups2", "libxkbcommon0", "libatspi2.0-0", "libxcomposite1", "libxdamage1", "libxfixes3", "libxrandr2", "libgbm1", "libcairo2", "libpango-1.0-0", "libasound2"},
+	"playwright": {"libglib2.0-0", "libatk1.0-0", "libatk-bridge2.0-0", "libcups2", "libxkbcommon0", "libatspi2.0-0", "libxcomposite1", "libxdamage1", "libxfixes3", "libxrandr2", "libgbm1", "libcairo2", "libpango-1.0-0", "libasound2", "libnspr4", "libnss3"},
 }
