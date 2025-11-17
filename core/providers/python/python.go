@@ -164,9 +164,9 @@ func (p *PythonProvider) InstallUv(ctx *generate.GenerateContext, install *gener
 	// package manager is detected and used per build. This code runs once, not multiple times.
 	if p.usesDep(ctx, "playwright") {
 		ctx.Logger.LogInfo("Installing Playwright chromium browser")
-		// 'playwright install chromium' installs only the chromium browser (not firefox/webkit)
-		// Chromium runs in headless mode by default when launched with headless=True in code
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install chromium"))
+		// --only-shell installs only the headless shell version (chromium_headless_shell)
+		// This is smaller and more appropriate for server environments than full chromium
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install --only-shell"))
 	}
 
 	install.AddCommands(installCommands)
@@ -209,7 +209,7 @@ func (p *PythonProvider) InstallPipenv(ctx *generate.GenerateContext, install *g
 
 	if p.usesDep(ctx, "playwright") {
 		ctx.Logger.LogInfo("Installing Playwright chromium browser")
-		install.AddCommand(plan.NewExecCommand("playwright install chromium"))
+		install.AddCommand(plan.NewExecCommand("playwright install --only-shell"))
 	}
 
 	outputs := []string{VENV_PATH}
@@ -236,7 +236,7 @@ func (p *PythonProvider) InstallPDM(ctx *generate.GenerateContext, install *gene
 
 	if p.usesDep(ctx, "playwright") {
 		ctx.Logger.LogInfo("Installing Playwright chromium browser")
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install chromium"))
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install --only-shell"))
 	}
 
 	install.AddCommands(installCommands)
@@ -267,7 +267,7 @@ func (p *PythonProvider) InstallPoetry(ctx *generate.GenerateContext, install *g
 
 	if p.usesDep(ctx, "playwright") {
 		ctx.Logger.LogInfo("Installing Playwright chromium browser")
-		installCommands = append(installCommands, plan.NewExecCommand("playwright install chromium"))
+		installCommands = append(installCommands, plan.NewExecCommand("playwright install --only-shell"))
 	}
 
 	install.AddCommands(installCommands)
@@ -300,7 +300,7 @@ func (p *PythonProvider) InstallPip(ctx *generate.GenerateContext, install *gene
 
 	if p.usesDep(ctx, "playwright") {
 		ctx.Logger.LogInfo("Installing Playwright chromium browser")
-		install.AddCommand(plan.NewExecCommand("playwright install chromium"))
+		install.AddCommand(plan.NewExecCommand("playwright install --only-shell"))
 	}
 
 	outputs := []string{VENV_PATH}

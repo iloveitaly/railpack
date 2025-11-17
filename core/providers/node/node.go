@@ -286,9 +286,9 @@ func (p *NodeProvider) InstallNodeDeps(ctx *generate.GenerateContext, install *g
 
 	if p.usesPlaywright() {
 		ctx.Logger.LogInfo("Installing Playwright chromium browser")
-		// Install only chromium browser (not firefox/webkit) for smaller image size
-		// Chromium runs in headless mode by default when launched with headless: true
-		install.AddCommand(plan.NewExecCommand(p.packageManager.ExecCommand("playwright install chromium")))
+		// --only-shell installs only the headless shell version (chromium_headless_shell)
+		// This is smaller and more appropriate for server environments than full chromium
+		install.AddCommand(plan.NewExecCommand(p.packageManager.ExecCommand("playwright install --only-shell")))
 	}
 }
 
