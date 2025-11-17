@@ -10,6 +10,7 @@ import (
 	"github.com/railwayapp/railpack/core/app"
 	"github.com/railwayapp/railpack/core/generate"
 	"github.com/railwayapp/railpack/core/plan"
+	"github.com/railwayapp/railpack/core/resolver"
 )
 
 type PackageManager string
@@ -278,6 +279,28 @@ func (p *NodeProvider) InstallNodeDeps(ctx *generate.GenerateContext, install *g
 	p.packageManager.installDependencies(ctx, p.workspace, install)
 }
 
+func (p *NodeProvider) applyNodeVersionResolution(ctx *generate.GenerateContext, miseStep *generate.MiseStepBuilder, nodeToolRef resolver.PackageRef) {
+	if envVersion, varName := ctx.Env.GetConfigVariable("NODE_VERSION"); envVersion != "" {
+		miseStep.Version(nodeToolRef, envVersion, varName)
+	}
+
+	if p.packageJson != nil && p.packageJson.Engines != nil && p.packageJson.Engines["node"] != "" {
+		miseStep.Version(nodeToolRef, p.packageJson.Engines["node"], "package.json > engines > node")
+	}
+
+	if nvmrc, err := ctx.App.ReadFile(".nvmrc"); err == nil {
+		if len(nvmrc) > 0 && nvmrc[0] == 'v' {
+			nvmrc = nvmrc[1:]
+		}
+
+		miseStep.Version(nodeToolRef, string(nvmrc), ".nvmrc")
+	}
+
+	if nodeVersionFile, err := ctx.App.ReadFile(".node-version"); err == nil {
+		miseStep.Version(nodeToolRef, string(nodeVersionFile), ".node-version")
+	}
+}
+
 func (p *NodeProvider) InstallMisePackages(ctx *generate.GenerateContext, miseStep *generate.MiseStepBuilder) {
 	requiresNode := p.requiresNode(ctx)
 	misePackages := []string{}
@@ -287,25 +310,7 @@ func (p *NodeProvider) InstallMisePackages(ctx *generate.GenerateContext, miseSt
 		node := miseStep.Default("node", DEFAULT_NODE_VERSION)
 		misePackages = append(misePackages, "node")
 
-		if envVersion, varName := ctx.Env.GetConfigVariable("NODE_VERSION"); envVersion != "" {
-			miseStep.Version(node, envVersion, varName)
-		}
-
-		if p.packageJson != nil && p.packageJson.Engines != nil && p.packageJson.Engines["node"] != "" {
-			miseStep.Version(node, p.packageJson.Engines["node"], "package.json > engines > node")
-		}
-
-		if nvmrc, err := ctx.App.ReadFile(".nvmrc"); err == nil {
-			if len(nvmrc) > 0 && nvmrc[0] == 'v' {
-				nvmrc = nvmrc[1:]
-			}
-
-			miseStep.Version(node, string(nvmrc), ".nvmrc")
-		}
-
-		if nodeVersionFile, err := ctx.App.ReadFile(".node-version"); err == nil {
-			miseStep.Version(node, string(nodeVersionFile), ".node-version")
-		}
+		p.applyNodeVersionResolution(ctx, miseStep, node)
 	}
 
 	// Bun
@@ -327,12 +332,11 @@ func (p *NodeProvider) InstallMisePackages(ctx *generate.GenerateContext, miseSt
 			miseStep.Version(bun, string(bunVersionFile), ".bun-version")
 		}
 
-		// If we don't need node in the final image, we still want to include it for the install steps
-		// since many packages need node-gyp to install native modules
-		// TODO: use the same version detection logic as when bun is not in place (NODE_VERSION, package.json engines, .nvmrc, .node-version)
 		if !requiresNode && ctx.Config.Packages["node"] == "" {
-			miseStep.Default("node", "latest")
+			node := miseStep.Default("node", DEFAULT_NODE_VERSION)
 			misePackages = append(misePackages, "node")
+
+			p.applyNodeVersionResolution(ctx, miseStep, node)
 		}
 	}
 
