@@ -11,11 +11,16 @@ import subprocess
 import os
 import click
 import shutil
+import tempfile
+import time
+import re
+from pathlib import Path
 
 MASTER_BRANCH_REF = "main"
 
 def run_command(command, check=True, capture_output=False, text=True, cwd=None):
     """Helper to run a shell command, exiting on failure."""
+    click.secho(f"+ {command}", dim=True, err=True)
     try:
         return subprocess.run(command, shell=True, check=check, capture_output=capture_output, text=text, cwd=cwd)
     except subprocess.CalledProcessError as e:
@@ -26,10 +31,46 @@ def run_command(command, check=True, capture_output=False, text=True, cwd=None):
             click.secho(f"STDERR: {e.stderr}", fg="red", err=True)
         sys.exit(1)
 
+def get_ai_tool():
+    """Determines the available AI tool (gemini or claude) and returns the command."""
+    if shutil.which("gemini"):
+        return 'gemini'
+    elif shutil.which("claude"):
+        return 'claude -p'
+    else:
+        click.secho("Error: Could not find 'gemini' or 'claude' executable in PATH.", fg="red", err=True)
+        sys.exit(1)
+
+def fetch_git_history(repo_root):
+    """Fetches git history using git-history-extraction."""
+    history_cmd = "uvx git-history-extraction@latest --since-last-tag --remote --format json"
+    history_result = run_command(history_cmd, capture_output=True, cwd=repo_root)
+    return compress_history(history_result.stdout)
+
+def compress_history(history):
+    """Compresses large lists of snapshot files in the git history."""
+    def replacement(match):
+        prefix = match.group(1)
+        # count = match.group(2)
+        files_str = match.group(3)
+        
+        files = [f.strip() for f in files_str.split(',')]
+        snapshots = [f for f in files if '/__snapshots__/' in f]
+        others = [f for f in files if '/__snapshots__/' not in f]
+        
+        if not snapshots:
+            return match.group(0)
+            
+        new_files = others + [f"[updated {len(snapshots)} snapshots]"]
+        return f"{prefix}[{len(new_files)}]: {', '.join(new_files)}"
+
+    return re.sub(r'^(\s+files)\[(\d+)\]: (.*)$', replacement, history, flags=re.MULTILINE)
+
 @click.command()
 @click.argument('increment_type', type=click.Choice(['patch', 'minor', 'major']), required=False)
 @click.option('--auto', is_flag=True, help='Automatically determine the version bump from git history.')
-def main(increment_type, auto):
+@click.option('--no-release-notes', is_flag=True, help='Skip automated release note generation.')
+def main(increment_type, auto, no_release_notes):
     """Creates and pushes a new release tag."""
     # TODO: Refactor to use GitPython for improved Git interaction.
     try:
@@ -60,6 +101,8 @@ def main(increment_type, auto):
             latest_tag = latest_tag_result.stdout.strip()
             latest_tag_ref = latest_tag
 
+        raw_history = None
+
         if auto:
             if increment_type:
                 click.secho("Error: Cannot use --auto and specify an increment type at the same time.", fg="red", err=True)
@@ -67,35 +110,37 @@ def main(increment_type, auto):
             
             click.secho("Automatically determining version bump from git history...", fg="blue")
             
-            # Determine log range
-            if latest_tag_ref:
-                log_range = f"{latest_tag_ref}..{remote_name}/{MASTER_BRANCH_REF}"
-            else:
-                log_range = f"{remote_name}/{MASTER_BRANCH_REF}"
-                
-            click.secho(f"Analyzing git log for range: {log_range}", fg="cyan")
-
-            # Check for available AI tools
-            if shutil.which("gemini"):
-                ai_cmd = 'gemini'
-            elif shutil.which("claude"):
-                ai_cmd = 'claude -p'
-            else:
-                click.secho("Error: Could not find 'gemini' or 'claude' executable in PATH for auto-detection.", fg="red", err=True)
-                sys.exit(1)
+            # Fetch history for analysis
+            raw_history = fetch_git_history(repo_root)
             
+            ai_cmd = get_ai_tool()
             click.secho(f"Using '{ai_cmd.split()[0]}' for analysis...", fg="cyan")
 
-            # Use git log to get history of remote main
-            # Using a format that provides subject and body for better context
-            git_log_cmd = f'git log {log_range} --pretty=format:"Commit: %h%nSubject: %s%nBody: %b%n--%n"'
+            # Construct prompt for bump detection
+            bump_prompt = f"{raw_history}\n\nAnalyze the git log above. What is the recommended semantic version bump? Respond with only one word: 'major', 'minor', or 'patch'."
             
-            auto_command = f'''{git_log_cmd} | {ai_cmd} "Analyze the git log from stdin. What is the recommended semanticversion bump? Respond with only one word: 'major', 'minor', or 'patch'." 2>/dev/null'''
+            # Pipe prompt to AI command
+            auto_command = f'{ai_cmd} "Analyze the git log from stdin. What is the recommended semantic version bump? Respond with only one word: \'major\', \'minor\', or \'patch\'"'
             
-            result = run_command(auto_command, capture_output=True, cwd=repo_root)
-            recommended_bump = result.stdout.strip().lower()
+            # We need to pipe the history into the command. 
+            # run_command helper doesn't support input pipe easily with current sig, so we use subprocess directly or write to temp file.
+            # Writing to temp file is safer for large inputs.
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".txt", prefix="railpack-bump-prompt-") as bump_prompt_file:
+                bump_prompt_file.write(bump_prompt)
+                bump_prompt_path = bump_prompt_file.name
+            
+            try:
+                result = run_command(f"cat '{bump_prompt_path}' | {ai_cmd}", capture_output=True, cwd=repo_root)
+                recommended_bump = result.stdout.strip().lower()
+            finally:
+                 if os.path.exists(bump_prompt_path):
+                    os.unlink(bump_prompt_path)
 
-            if recommended_bump not in ['major', 'minor', 'patch']:
+            # Cleanup response (sometimes AI adds extra text/punctuation)
+            match = re.search(r'\b(major|minor|patch)\b', recommended_bump)
+            if match:
+                recommended_bump = match.group(1)
+            else:
                 click.secho(f"Error: Auto-detection returned an invalid choice: '{recommended_bump}'", fg="red", err=True)
                 sys.exit(1)
             
@@ -133,8 +178,70 @@ def main(increment_type, auto):
         click.secho(f"Latest tag: {latest_tag}", fg="yellow")
         click.secho(f"New version ({increment_type}): {new_version}\n", fg="green", bold=True) # Added \n for spacing
 
+        # --- Release Notes Generation ---
+        summary_file_path = None
+        if not no_release_notes:
+            click.secho("Generating release notes...", fg="blue")
+
+            # 1. Ensure we have history
+            if raw_history is None:
+                raw_history = fetch_git_history(repo_root)
+
+            # 2. Read prompt template
+            prompt_path = Path(repo_root) / ".mise/tasks/release-prompt.txt"
+            prompt_template = prompt_path.read_text()
+
+            # 3. Combine
+            full_prompt = f"Previous Version: {latest_tag}\nNew Version: {new_version}\n\n{prompt_template}\n\n{raw_history}"
+
+            # 4. Run AI (Gemini/Claude)
+            ai_cmd = get_ai_tool()
+            click.secho(f"Asking {ai_cmd.split()[0]} to summarize...", fg="cyan")
+
+            # Write prompt to temp file
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".txt", prefix="railpack-release-prompt-") as prompt_file:
+                prompt_file.write(full_prompt)
+                prompt_file_path = prompt_file.name
+
+            try:
+                # Pipe prompt file content to AI command
+                gen_cmd = f"cat '{prompt_file_path}' | {ai_cmd}"
+                summary_result = run_command(gen_cmd, capture_output=True)
+                summary = summary_result.stdout.strip()
+                
+                # Remove markdown code block wrapping if present
+                summary = re.sub(r'^```[a-zA-Z]*\n', '', summary)
+                summary = re.sub(r'\n```$', '', summary)
+                summary = summary.strip()
+            finally:
+                if os.path.exists(prompt_file_path):
+                    os.unlink(prompt_file_path)
+
+            # 5. Write summary to temp file for user editing
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".md", prefix="railpack-release-notes-") as summary_file:
+                summary_file.write(summary)
+                summary_file_path = summary_file.name
+
+            click.secho(f"\nRelease notes generated at: {summary_file_path}", fg="green")
+            click.secho("-" * 40, dim=True)
+            click.echo(summary)
+            click.secho("-" * 40, dim=True)
+
+            # 6. Prompt for edit
+            if click.confirm(f"Do you want to edit these release notes?", default=False):
+                click.edit(filename=summary_file_path)
+                
+                # Re-read file
+                summary = Path(summary_file_path).read_text()
+                click.secho("Reloaded release notes.", fg="green")
+
         # Confirmation
-        if not click.confirm(f"This will create and push the tag {new_version}. Are you sure?"):
+        msg = f"This will create and push the tag {new_version}"
+        if not no_release_notes:
+            msg += " and update the release notes"
+        msg += ". Are you sure?"
+        
+        if not click.confirm(msg):
             click.secho("Aborted by user.", fg="yellow")
             sys.exit(0)
 
@@ -145,6 +252,40 @@ def main(increment_type, auto):
         run_command(f"git push {remote_name} {new_version}", cwd=repo_root)
 
         click.secho(f"Successfully created and pushed tag {new_version}.", fg="green", bold=True)
+
+        if not no_release_notes:
+            # Update GitHub Release
+            click.secho(f"Waiting for GitHub Release {new_version} to be created (timeout: 30m)...", fg="blue")
+            start_time = time.time()
+            found = False
+            while time.time() - start_time < 30 * 60: # 30 minutes
+                # Check if release exists
+                check_cmd = f"gh release view {new_version} --json url"
+                proc = run_command(check_cmd, check=False, capture_output=True)
+                if proc.returncode == 0:
+                    found = True
+                    break
+                
+                click.echo(".", nl=False)
+                sys.stdout.flush()
+                time.sleep(60) # Check every minute
+            
+            click.echo("") # Newline
+            
+            if found:
+                click.secho("Release found! Updating release notes...", fg="green")
+                # Update notes using the temp file
+                run_command(f"gh release edit {new_version} --notes-file '{summary_file_path}'")
+                click.secho(f"Release notes for {new_version} updated successfully.", fg="green", bold=True)
+                
+                # Clean up summary file only on success
+                if os.path.exists(summary_file_path):
+                    os.unlink(summary_file_path)
+            else:
+                click.secho(f"Timeout: Release {new_version} was not found on GitHub after 30 minutes. Release notes were not updated.", fg="red")
+                click.secho(f"You can manually update the release notes using the file: {summary_file_path}", fg="yellow")
+                # Don't delete the file if failed
+                return
 
     except Exception as e:
         click.secho(f"An unexpected error occurred: {e}", fg="red", err=True)
