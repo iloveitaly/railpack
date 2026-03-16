@@ -165,13 +165,13 @@ func (m *Mise) runCmdWithEnv(extraEnv []string, args ...string) (string, error) 
 	cmd.Stderr = &stderr
 
 	// https://github.com/jdx/mise/blob/main/src/dirs.rs
-	// MISE_SYSTEM_DIR ensures any local config on the host does not interfere with mise commands
+	// MISE_SYSTEM_CONFIG_DIR ensures any local config on the host does not interfere with mise commands
 	cmd.Env = append(cmd.Env,
 		fmt.Sprintf("HOME=%s", m.cacheDir),
 		fmt.Sprintf("MISE_CACHE_DIR=%s", cacheDir),
 		fmt.Sprintf("MISE_DATA_DIR=%s", dataDir),
 		fmt.Sprintf("MISE_STATE_DIR=%s", stateDir),
-		fmt.Sprintf("MISE_SYSTEM_DIR=%s", systemDir),
+		fmt.Sprintf("MISE_SYSTEM_CONFIG_DIR=%s", systemDir),
 		// TODO doesn't HTTP timeout apply to fetch remote versions too?
 		"MISE_HTTP_TIMEOUT=60s",
 		"MISE_FETCH_REMOTE_VERSIONS_TIMEOUT=60s",
