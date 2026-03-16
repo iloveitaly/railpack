@@ -51,6 +51,11 @@ var BuildCommand = &cli.Command{
 			Usage: "Unique id to prefix to cache keys",
 		},
 		&cli.BoolFlag{
+			Name:  "no-cache",
+			Usage: "Do not use cache when building",
+			Value: false,
+		},
+		&cli.BoolFlag{
 			Name:   "dump-llb",
 			Hidden: true,
 			Value:  false,
@@ -102,6 +107,7 @@ var BuildCommand = &cli.Command{
 			Secrets:      env.Variables,
 			Platform:     platformStr,
 			GitHubToken:  os.Getenv("GITHUB_TOKEN"),
+			NoCache:      cmd.Bool("no-cache"),
 		})
 		if err != nil {
 			return cli.Exit(err, 1)
