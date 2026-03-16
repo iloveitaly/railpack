@@ -309,9 +309,10 @@ func (p *PhpProvider) getPhpExtensions(ctx *generate.GenerateContext) []string {
 	}
 
 	if dbConnection := ctx.Env.GetVariable("DB_CONNECTION"); dbConnection != "" {
-		if dbConnection == "mysql" {
+		switch dbConnection {
+		case "mysql":
 			extensions = append(extensions, "pdo_mysql")
-		} else if dbConnection == "pgsql" {
+		case "pgsql":
 			extensions = append(extensions, "pdo_pgsql")
 		}
 	}

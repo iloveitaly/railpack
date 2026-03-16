@@ -153,9 +153,10 @@ func BuildWithBuildkitClient(appDir string, plan *plan.BuildPlan, opts BuildWith
 		}()
 
 		progressMode := progressui.AutoMode
-		if opts.ProgressMode == "plain" {
+		switch opts.ProgressMode {
+		case "plain":
 			progressMode = progressui.PlainMode
-		} else if opts.ProgressMode == "tty" {
+		case "tty":
 			progressMode = progressui.TtyMode
 		}
 
