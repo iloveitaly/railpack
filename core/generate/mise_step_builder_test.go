@@ -14,7 +14,7 @@ func TestGetPackageVersions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	ctx := CreateTestContext(t, "../../examples/python-uv-tool-versions")
 
@@ -68,7 +68,7 @@ func TestGetPackageVersionsWithNoToolVersions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	ctx := CreateTestContext(t, "../../examples/node-tanstack-start")
 

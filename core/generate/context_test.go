@@ -162,7 +162,7 @@ func TestGenerateContextDockerignore(t *testing.T) {
 		// Create a temporary directory with an inaccessible .dockerignore
 		tempDir, err := os.MkdirTemp("", "dockerignore-test")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		dockerignorePath := filepath.Join(tempDir, ".dockerignore")
 		err = os.WriteFile(dockerignorePath, []byte("*.log\nnode_modules\n"), 0644)
