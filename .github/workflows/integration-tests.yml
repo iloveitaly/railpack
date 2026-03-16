@@ -31,7 +31,7 @@ jobs:
         run: |
           examples=$(find examples -name "test.json" -exec dirname {} \; | xargs -n 1 basename | jq -R -s -c 'split("\n")[:-1]')
           echo "examples=$examples" >> "$GITHUB_OUTPUT"
-  
+
   # integration tests plan, build, and run example projects. Running the example projects requires both the builder and runtime
   # images. If the mise version changes, we want to ensure there are no breakages, which means we need to use fresh images
   # that contain the pinned mise version. The code below builds these requires images, and pushes them to a production
@@ -47,6 +47,9 @@ jobs:
     steps:
       # duplicated on the release.yml job, keep these in sync
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          # we need the full history to determine if the mise version has changed
+          fetch-depth: 0
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db
       - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
@@ -61,14 +64,14 @@ jobs:
       # dockerfile, but this should be extremely rare and would be an important breaking change. Mise versions should be
       # changed pretty frequently, which means we'll pick up any updates to the `FROM` images soon, so we shouldn't need
       # to update these images outside of a mise version update.
-      - name: Check for mise version change
+      - name: Check for image input changes
         id: mise_version
         run: |
-          # clones are shallow by default
-          git fetch origin main --depth=1
-
-          if ! git diff --quiet origin/main HEAD -- core/mise/version.txt; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"            
+          if ! git diff --quiet origin/main HEAD -- \
+            core/mise/version.txt \
+            images/debian/build \
+            images/debian/runtime; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
@@ -261,7 +264,7 @@ jobs:
           auto-push: ${{ github.ref == 'refs/heads/main' }}
           benchmark-data-dir-path: dev/bench
           # alert when an image grows more than 20%
-          alert-threshold: '120%'
+          alert-threshold: "120%"
           # Enable Job Summary for PRs
           summary-always: true
           # no comment-on-alert, comment-always; just on PR
