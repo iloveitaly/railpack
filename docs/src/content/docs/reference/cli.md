@@ -109,6 +109,50 @@ autocompletion and validation.
 railpack schema
 ```
 
+### completion
+
+Generates shell completion scripts for your preferred shell.
+
+**Usage:**
+
+```bash
+railpack completion [bash|zsh|fish|pwsh]
+```
+
+#### Setup
+
+The most reliable way to enable completion is to source it directly in your shell configuration file.
+
+**Zsh**
+Add this to your `~/.zshrc`:
+
+```bash
+source <(railpack completion zsh)
+```
+
+**Bash**
+Add this to your `~/.bashrc`:
+
+```bash
+source <(railpack completion bash)
+```
+
+**Fish**
+Add this to your `~/.config/fish/config.fish`:
+
+```fish
+railpack completion fish | source
+```
+
+#### Advanced: Zsh Plugin Managers
+
+If you use a plugin manager like **Zinit**, you can load the completion without cloning the entire repository by using a snippet to point directly to the plugin file:
+
+```zsh
+zinit ice wait'0'
+zinit snippet https://raw.githubusercontent.com/railwayapp/railpack/main/railpack.plugin.zsh
+```
+
 ### frontend
 
 Starts the BuildKit GRPC frontend server for internal build system use.
