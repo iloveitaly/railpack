@@ -7,14 +7,14 @@ import (
 
 type meson struct{}
 
-func (_ *CppProvider) DetectMeson(ctx *generate.GenerateContext) (buildSystem, bool) {
+func (p *CppProvider) DetectMeson(ctx *generate.GenerateContext) (buildSystem, bool) {
 	if ctx.App.HasFile("meson.build") {
 		return &meson{}, true
 	}
 	return nil, false
 }
 
-func (_ *meson) Install(ctx *generate.GenerateContext, mise *generate.MiseStepBuilder) {
+func (m *meson) Install(ctx *generate.GenerateContext, mise *generate.MiseStepBuilder) {
 	mise.Default("meson", "latest")
 	mise.Default("ninja", "latest")
 	// python + pipx are needed because of an installation issue with meson; this could be fixed in the future
@@ -23,7 +23,7 @@ func (_ *meson) Install(ctx *generate.GenerateContext, mise *generate.MiseStepBu
 	mise.UseMiseVersions(ctx, []string{"meson", "ninja"})
 }
 
-func (_ *meson) Build(build *generate.CommandStepBuilder) {
+func (m *meson) Build(build *generate.CommandStepBuilder) {
 	build.AddCommands([]plan.Command{
 		plan.NewExecCommand("meson setup /build"),
 		plan.NewExecCommand("meson compile -C /build"),
