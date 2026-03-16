@@ -245,8 +245,10 @@ jobs:
       - name: Merge size.json files into benchmark format
         # customSmallerIsBetter expects [{name, unit, value}]; suffix name with arch for side-by-side comparison
         run: |
+          # create a master size.json for manual debugging
           jq -s 'map(. + {name: (.name + " (x86)")})' size-x86-*/size.json > x86.json
           jq -s 'map(. + {name: (.name + " (arm)")})' size-arm-*/size.json > arm.json
+          # this debugging data is compared against the "master" copy in gh-pages
           jq -s 'add | sort_by(.name) | map({name, unit: "bytes", value: .size})' x86.json arm.json > benchmark.json
 
       - name: Store benchmark results
