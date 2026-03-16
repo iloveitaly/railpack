@@ -63,7 +63,8 @@ jobs:
       # has changed. This isn't *exactly* true, as there could be a world where we want to build a new image with a changed
       # dockerfile, but this should be extremely rare and would be an important breaking change. Mise versions should be
       # changed pretty frequently, which means we'll pick up any updates to the `FROM` images soon, so we shouldn't need
-      # to update these images outside of a mise version update.
+      # to update these images outside of a mise version update. Updating images in the test workflow when a mise version has
+      # NOT changes is dangerous: it could cause changes in an image that is used by existing production code.
       - name: Check for image input changes
         id: mise_version
         run: |
