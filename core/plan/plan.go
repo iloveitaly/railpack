@@ -97,18 +97,12 @@ func (p *BuildPlan) Normalize() {
 	// Keep finding new referenced steps until no more are found
 	// Use a map to track which steps we've already checked to avoid infinite loops
 	checkedSteps := make(map[string]bool)
+	// We use maxIterations to prevent infinite loops from circular dependencies.
+	// If we exceed this maximum possible number of unique edges, we can safely
+	// break as we've already collected all reachable steps.
 	maxIterations := len(p.Steps) * len(p.Steps) // Maximum possible unique edges in a directed graph
-	iterations := 0
 
-	for {
-		if iterations >= maxIterations {
-			// We've exceeded the maximum possible number of unique edges
-			// This means we have a circular dependency, but we've already
-			// collected all reachable steps, so we can break
-			break
-		}
-		iterations++
-
+	for iterations := 0; iterations < maxIterations; iterations++ {
 		newReferences := false
 		for _, step := range p.Steps {
 			// Skip if this step isn't referenced
