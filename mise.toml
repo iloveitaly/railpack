@@ -93,6 +93,13 @@ run = ["go vet ./...", "go fmt ./...", "golangci-lint run"]
 [tasks.tidy]
 run = "go mod tidy"
 
+[tasks.upgrade-go-packages]
+description = "Upgrade all Go packages and tidy the module"
+run = [
+  "go get -u ./...",
+  "go mod tidy"
+]
+
 # build docs for production
 [tasks.docs-build]
 dir = "docs"
