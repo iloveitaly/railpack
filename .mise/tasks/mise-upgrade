@@ -89,6 +89,13 @@ if ! git diff --cached --quiet; then
   git commit -F "$(git rev-parse --git-dir)/COMMIT_EDITMSG"
 fi
 
+echo "Upgrading go packages..."
+mise run upgrade-go-packages
+if [[ -n "$(git status --porcelain go.mod go.sum)" ]]; then
+  git add go.mod go.sum
+  git commit -m "chore: update go packages"
+fi
+
 mise run check
 
 # Push the branch (needed in CI and good practice locally)

@@ -61,7 +61,7 @@ var PrepareCommand = &cli.Command{
 			if err != nil {
 				return cli.Exit(err, 1)
 			}
-			os.Stdout.Write(serialized)
+			_, _ = os.Stdout.Write(serialized)
 		}
 
 		// Save plan if requested

@@ -13,7 +13,7 @@ func TestCheckAndParseDockerignore(t *testing.T) {
 	t.Run("nonexistent dockerignore", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "dockerignore-test")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		testApp, err := app.NewApp(tempDir)
 		require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestCheckAndParseDockerignore(t *testing.T) {
 		// Create a temporary directory and file
 		tempDir, err := os.MkdirTemp("", "dockerignore-test")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		dockerignorePath := filepath.Join(tempDir, ".dockerignore")
 		err = os.WriteFile(dockerignorePath, []byte("*.log\nnode_modules\n"), 0644)
@@ -132,7 +132,7 @@ func TestDockerignoreContext(t *testing.T) {
 	t.Run("new context", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "dockerignore-test")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		testApp, err := app.NewApp(tempDir)
 		require.NoError(t, err)
@@ -162,7 +162,7 @@ func TestDockerignoreContext(t *testing.T) {
 	t.Run("parse nonexistent file", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "dockerignore-test")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		testApp, err := app.NewApp(tempDir)
 		require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestDockerignoreContext(t *testing.T) {
 		// Create a temporary directory with an inaccessible .dockerignore
 		tempDir, err := os.MkdirTemp("", "dockerignore-test")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		dockerignorePath := filepath.Join(tempDir, ".dockerignore")
 		err = os.WriteFile(dockerignorePath, []byte("*.log\n"), 0644)
@@ -202,7 +202,7 @@ func TestDockerignoreDuplicatePatterns(t *testing.T) {
 	t.Run("duplicate patterns removed", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "dockerignore-test")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		// Create test files
 		err = os.WriteFile(filepath.Join(tempDir, "keep.txt"), []byte("exists"), 0644)
@@ -254,7 +254,7 @@ func TestCheckAndParseDockerignoreWithNegation(t *testing.T) {
 	t.Run("negated patterns with existing and non-existing files and folders", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "dockerignore-test")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		// Create test files
 		err = os.MkdirAll(filepath.Join(tempDir, "negation_test", "existing_folder"), 0755)

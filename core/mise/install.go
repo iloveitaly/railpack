@@ -115,14 +115,13 @@ func downloadAndInstall(cacheDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to download mise: %w", err)
 	}
-	defer resp.Body.Close()
-
+	defer func() { _ = resp.Body.Close() }()
 	// Create temporary directory
 	tempDir, err := os.MkdirTemp("", "mise-install")
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	archivePath := filepath.Join(tempDir, assetName)
 	f, err := os.Create(archivePath)
@@ -131,10 +130,10 @@ func downloadAndInstall(cacheDir string) error {
 	}
 
 	if _, err := io.Copy(f, resp.Body); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("failed to save archive: %w", err)
 	}
-	f.Close()
+	_ = f.Close()
 
 	if runtime.GOOS == "windows" {
 		err = extractZip(archivePath, binaryPath)
@@ -159,13 +158,13 @@ func extractTarGz(archivePath, binaryPath string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	gzr, err := gzip.NewReader(f)
 	if err != nil {
 		return err
 	}
-	defer gzr.Close()
+	defer func() { _ = gzr.Close() }()
 
 	tr := tar.NewReader(gzr)
 	binaryPathInArchive := "mise/bin/mise"
@@ -209,7 +208,7 @@ func extractZip(archivePath, binaryPath string) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	writeAndMove, cleanup, err := createAtomicWriter(binaryPath)
 	if err != nil {
@@ -227,7 +226,7 @@ func extractZip(archivePath, binaryPath string) error {
 
 			err = writeAndMove(func(tempFile *os.File) error {
 				_, err := io.Copy(tempFile, rc)
-				rc.Close()
+				_ = rc.Close()
 				return err
 			})
 
@@ -264,9 +263,9 @@ func createAtomicWriter(targetPath string) (writeAndMove func(write func(tempFil
 
 	success := false
 	cleanup = func() {
-		tempFile.Close()
+		_ = tempFile.Close()
 		if !success {
-			os.Remove(tempPath)
+			_ = os.Remove(tempPath)
 		}
 	}
 

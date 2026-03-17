@@ -77,7 +77,7 @@ func BuildWithBuildkitClient(appDir string, plan *plan.BuildPlan, opts BuildWith
 	if err != nil {
 		return fmt.Errorf("failed to connect to buildkit: %w", err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	// Get the buildkit info early so we can ensure we can connect to the buildkit host
 	info, err := c.Info(ctx)
@@ -130,7 +130,7 @@ func BuildWithBuildkitClient(appDir string, plan *plan.BuildPlan, opts BuildWith
 	if opts.OutputDir == "" {
 		// Create a pipe to connect buildkit output to docker load
 		pipeR, pipeW = io.Pipe()
-		defer pipeR.Close()
+		defer func() { _ = pipeR.Close() }()
 
 		// Pipe the image into `docker load`
 		go func() {
@@ -153,9 +153,10 @@ func BuildWithBuildkitClient(appDir string, plan *plan.BuildPlan, opts BuildWith
 		}()
 
 		progressMode := progressui.AutoMode
-		if opts.ProgressMode == "plain" {
+		switch opts.ProgressMode {
+		case "plain":
 			progressMode = progressui.PlainMode
-		} else if opts.ProgressMode == "tty" {
+		case "tty":
 			progressMode = progressui.TtyMode
 		}
 
@@ -246,7 +247,7 @@ func BuildWithBuildkitClient(appDir string, plan *plan.BuildPlan, opts BuildWith
 	<-progressDone
 
 	if pipeW != nil {
-		pipeW.Close()
+		_ = pipeW.Close()
 	}
 
 	if err != nil {

@@ -13,7 +13,7 @@ func TestMistGetLatestVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	mise, err := New(tempDir)
 	if err != nil {
@@ -70,7 +70,7 @@ func TestMiseGetAllVersions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	mise, err := New(tempDir)
 	if err != nil {

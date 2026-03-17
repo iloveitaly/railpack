@@ -40,6 +40,7 @@ run = [
 
 # if a example folder does not have a test.json file, it will be skipped
 [tasks.examples-without-tests]
+
 run = "find examples -mindepth 1 -maxdepth 1 -type d ! -exec [ -f \"{}/test.json\" ] \\; -print "
 
 # run unit tests
@@ -87,22 +88,26 @@ run = [
 
 # linting, formatting, and static analysis
 [tasks.check]
-run = ["go vet ./...", "go fmt ./...", "golangci-lint run"]
+run = ["go vet ./...", "go fmt ./...", "golangci-lint run", "go mod verify"]
 
 [tasks.tidy]
 run = "go mod tidy"
 
+[tasks.upgrade-go-packages]
+description = "Upgrade all Go packages and tidy the module"
+run = [
+  "go get -u ./...",
+  "go mod tidy"
+]
+
 # build docs for production
 [tasks.docs-build]
 dir = "docs"
-run = [
-  "bun install --frozen-lockfile",
-  "bun run build"
-]
+run = ["bun install --frozen-lockfile", "bun run build"]
 
 [tasks.docs-dev]
 dir = "docs"
-run = ["bun install","bun run dev"]
+run = ["bun install", "bun run dev"]
 
 [tasks.image-builder-build]
 run = "docker build --build-arg MISE_VERSION=$RAILPACK_MISE_VERSION -f images/debian/build/Dockerfile -t railpack-builder:local ."
@@ -111,8 +116,8 @@ run = "docker build --build-arg MISE_VERSION=$RAILPACK_MISE_VERSION -f images/de
 run = "docker build -f images/debian/runtime/Dockerfile -t railpack-runtime:local ."
 
 [tools]
-go = "1.23.4"
-"github:golangci/golangci-lint" = "1.64.8"
+go = "1.26"
+"github:golangci/golangci-lint" = "2"
 bun = "1.3"
 
 [settings]
