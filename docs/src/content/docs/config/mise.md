@@ -1,27 +1,27 @@
 ---
 title: Mise Configuration
-description: Understanding how Railpack uses Mise and how to configure it
+description: How to customize your image using Mise configuration
 ---
 
-Railpack is built on top of [Mise](https://mise.jdx.dev/). This enables you to use the various mise configuration options
-to customize both your development and production environments.
+Railpack is built on top of [Mise](https://mise.jdx.dev/). You can use the various mise configuration options
+to customize the Railpack-generated image. For instance, you can set environment variables, allow precompiled
+ruby versions, and add additional utilities like `jq` to your image all through the mise configuration toml.
 
 ## Philosophy
 
-Railpack does not globally opt-in to non-default Mise configurations for
-specific languages. We trust the tool authors to define the most reliable
-defaults for their respective language ecosystems.
-
-For example, although precompiled Ruby binaries can offer faster build
-times, Railpack follows the Mise default of building Ruby from source. We
-avoid forcing these unconventional behaviors at a global level to maintain
-long-term stability and compatibility.
+* We use the latest mise version. There is automated tooling setup to ensure
+  the mise version on the latest Railpack version is no more than a couple weeks
+  out of date.
+* Railpack assumes the default Mise configuration options. For instance, we won't
+  opt-in users to precompiled ruby ahead of when mise has scheduled it to become default.
+* Railpack generates global mise configuration based on analyizing the application
+  source code. However, this global configuration is set in `/etc/mise/config.toml`
+  so it can easily be overwritten in your application.
 
 ## Customization
 
-You can customize how mise operates when setting up your application by
-using a mise configuration file or environment variables. Configuration
-files are generally a better idea.
+Use a mise configuration file or environment variables to customize mise in the Railpack-generated container.
+Configuration files are generally a better idea.
 
 ### Configuration Files
 
