@@ -48,11 +48,11 @@ func TestGenerateBuildPlanForExamples(t *testing.T) {
 
 			plan := buildResult.Plan
 
-			// Remove the mise.toml asset since the versions may change between runs
+			// Remove the generated-mise-toml asset since the versions may change between runs
 			for _, step := range plan.Steps {
 				for name := range step.Assets {
-					if name == "mise.toml" {
-						step.Assets[name] = "[mise.toml]"
+					if name == "generated-mise-toml" {
+						step.Assets[name] = "[generated-mise-toml]"
 					}
 				}
 			}

@@ -28,7 +28,7 @@
  "steps": [
   {
    "assets": {
-    "mise.toml": "[tools]\n  [tools.go]\n    version = \"1.23.5\"\n  [tools.node]\n    version = \"20.18.2\"\n  [tools.python]\n    version = \"3.13.1\"\n"
+    "generated-mise-toml": "[tools]\n  [tools.go]\n    version = \"1.23.5\"\n  [tools.node]\n    version = \"20.18.2\"\n  [tools.python]\n    version = \"3.13.1\"\n"
    },
    "commands": [
     {
@@ -36,7 +36,7 @@
     },
     {
      "customName": "create mise config",
-     "name": "mise.toml",
+     "name": "generated-mise-toml",
      "path": "/etc/mise/config.toml"
     },
     {
