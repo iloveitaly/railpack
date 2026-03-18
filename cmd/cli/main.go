@@ -50,10 +50,13 @@ func main() {
 	}
 
 	cmd := &urfave.Command{
-		Name:                  "railpack",
-		Usage:                 "Automatically analyze and generate build plans for applications",
-		EnableShellCompletion: true,
-		Version:               cli.Version,
+		Name:                       "railpack",
+		Usage:                      "Automatically analyze and generate build plans for applications",
+		EnableShellCompletion:      true,
+		ConfigureShellCompletionCommand: func(c *urfave.Command) {
+			c.Hidden = false
+		},
+		Version: cli.Version,
 		Flags: []urfave.Flag{
 			&urfave.BoolFlag{
 				Name:        "verbose",
