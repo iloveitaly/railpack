@@ -67,15 +67,19 @@
   },
   {
    "assets": {
-    "mise.toml": "[mise.toml]"
+    "generated-mise-toml": "[generated-mise-toml]"
    },
    "commands": [
     {
      "path": "/mise/shims"
     },
     {
+     "dest": "Gemfile",
+     "src": "Gemfile"
+    },
+    {
      "customName": "create mise config",
-     "name": "mise.toml",
+     "name": "generated-mise-toml",
      "path": "/etc/mise/config.toml"
     },
     {

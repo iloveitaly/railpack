@@ -37,7 +37,7 @@
     "step": "build"
    }
   ],
-  "startCommand": "ruby app.rb",
+  "startCommand": "ruby --yjit app.rb",
   "variables": {
    "BUNDLE_GEMFILE": "/app/Gemfile",
    "GEM_HOME": "/usr/local/bundle",
@@ -54,8 +54,8 @@
    ],
    "commands": [
     {
-     "cmd": "sh -c 'apt-get update \u0026\u0026 apt-get install -y libjemalloc-dev libyaml-dev'",
-     "customName": "install apt packages: libjemalloc-dev libyaml-dev"
+     "cmd": "sh -c 'apt-get update \u0026\u0026 apt-get install -y cargo libjemalloc-dev libyaml-dev rustc'",
+     "customName": "install apt packages: cargo libjemalloc-dev libyaml-dev rustc"
     }
    ],
    "inputs": [
@@ -74,8 +74,20 @@
      "path": "/mise/shims"
     },
     {
+     "dest": "mise.toml",
+     "src": "mise.toml"
+    },
+    {
+     "dest": ".ruby-version",
+     "src": ".ruby-version"
+    },
+    {
      "dest": "Gemfile",
      "src": "Gemfile"
+    },
+    {
+     "dest": "mise.lock",
+     "src": "mise.lock"
     },
     {
      "customName": "create mise config",
@@ -84,7 +96,7 @@
     },
     {
      "cmd": "mise install",
-     "customName": "install mise packages: node, ruby"
+     "customName": "install mise packages: ruby"
     }
    ],
    "inputs": [
@@ -108,7 +120,7 @@
   {
    "commands": [
     {
-     "cmd": "gem install -N bundler:2.3.7"
+     "cmd": "gem install -N bundler:2.4.9"
     },
     {
      "dest": "Gemfile",
@@ -167,8 +179,8 @@
    ],
    "commands": [
     {
-     "cmd": "sh -c 'apt-get update \u0026\u0026 apt-get install -y libatomic1 libjemalloc2 libyaml-dev'",
-     "customName": "install apt packages: libatomic1 libjemalloc2 libyaml-dev"
+     "cmd": "sh -c 'apt-get update \u0026\u0026 apt-get install -y libjemalloc2 libyaml-dev'",
+     "customName": "install apt packages: libjemalloc2 libyaml-dev"
     }
    ],
    "inputs": [
