@@ -155,7 +155,7 @@ func (a *App) ReadFile(name string) (string, error) {
 }
 
 // ReadJSON reads and parses a JSON file
-func (a *App) ReadJSON(name string, v interface{}) error {
+func (a *App) ReadJSON(name string, v any) error {
 	data, err := a.ReadFile(name)
 	if err != nil {
 		return err
@@ -177,7 +177,7 @@ func (a *App) ReadJSON(name string, v interface{}) error {
 }
 
 // ReadYAML reads and parses a YAML file
-func (a *App) ReadYAML(name string, v interface{}) error {
+func (a *App) ReadYAML(name string, v any) error {
 	data, err := a.ReadFile(name)
 	if err != nil {
 		return err
@@ -190,7 +190,7 @@ func (a *App) ReadYAML(name string, v interface{}) error {
 	return nil
 }
 
-func (a *App) ReadTOML(name string, v interface{}) error {
+func (a *App) ReadTOML(name string, v any) error {
 	data, err := a.ReadFile(name)
 	if err != nil {
 		return err

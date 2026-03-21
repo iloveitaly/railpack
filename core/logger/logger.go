@@ -25,7 +25,7 @@ func NewLogger() *Logger {
 	}
 }
 
-func (l *Logger) LogInfo(format string, args ...interface{}) {
+func (l *Logger) LogInfo(format string, args ...any) {
 	msg := format
 	if len(args) > 0 {
 		msg = fmt.Sprintf(format, args...)
@@ -36,7 +36,7 @@ func (l *Logger) LogInfo(format string, args ...interface{}) {
 	})
 }
 
-func (l *Logger) LogWarn(format string, args ...interface{}) {
+func (l *Logger) LogWarn(format string, args ...any) {
 	msg := format
 	if len(args) > 0 {
 		msg = fmt.Sprintf(format, args...)
@@ -47,7 +47,7 @@ func (l *Logger) LogWarn(format string, args ...interface{}) {
 	})
 }
 
-func (l *Logger) LogError(format string, args ...interface{}) {
+func (l *Logger) LogError(format string, args ...any) {
 	msg := format
 	if len(args) > 0 {
 		msg = fmt.Sprintf(format, args...)

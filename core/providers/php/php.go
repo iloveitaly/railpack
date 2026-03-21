@@ -276,10 +276,10 @@ func (p *PhpProvider) getPhpExtensions(ctx *generate.GenerateContext) []string {
 		return extensions
 	}
 
-	if require, ok := composerJson["require"].(map[string]interface{}); ok {
+	if require, ok := composerJson["require"].(map[string]any); ok {
 		for ext := range require {
-			if strings.HasPrefix(ext, "ext-") {
-				extensions = append(extensions, strings.TrimPrefix(ext, "ext-"))
+			if after, ok0 := strings.CutPrefix(ext, "ext-"); ok0 {
+				extensions = append(extensions, after)
 			}
 		}
 	}
@@ -324,7 +324,7 @@ func (p *PhpProvider) getPhpExtensions(ctx *generate.GenerateContext) []string {
 	return extensions
 }
 
-func (p *PhpProvider) needsRedisExtension(ctx *generate.GenerateContext, composerJson map[string]interface{}) bool {
+func (p *PhpProvider) needsRedisExtension(ctx *generate.GenerateContext, composerJson map[string]any) bool {
 	// Check if Redis is explicitly mentioned in environment variables
 	redisHost := ctx.Env.GetVariable("REDIS_HOST")
 	redisUrl := ctx.Env.GetVariable("REDIS_URL")
@@ -338,7 +338,7 @@ func (p *PhpProvider) needsRedisExtension(ctx *generate.GenerateContext, compose
 	}
 
 	// Check for Redis packages in composer.json
-	if require, ok := composerJson["require"].(map[string]interface{}); ok {
+	if require, ok := composerJson["require"].(map[string]any); ok {
 		for pkg := range require {
 			if strings.Contains(pkg, "redis") ||
 				strings.Contains(pkg, "predis") {
@@ -368,7 +368,7 @@ func (p *PhpProvider) getConfigFiles(ctx *generate.GenerateContext) (*ConfigFile
 		phpRootDir = "/app/public"
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"RAILPACK_PHP_ROOT_DIR": phpRootDir,
 		"IS_LARAVEL":            p.usesLaravel(ctx),
 	}
@@ -417,8 +417,8 @@ func (p *PhpProvider) phpImagePackage(ctx *generate.GenerateContext) (*generate.
 	if composerJson, err := p.readComposerJson(ctx); err == nil {
 		phpVersion := objx.New(composerJson).Get("require.php")
 		if phpVersion.IsStr() {
-			if strings.HasPrefix(phpVersion.Str(), "^") {
-				imageStep.Version(php, strings.TrimPrefix(phpVersion.Str(), "^"), "composer.json > require > php")
+			if after, ok := strings.CutPrefix(phpVersion.Str(), "^"); ok {
+				imageStep.Version(php, after, "composer.json > require > php")
 			} else {
 				imageStep.Version(php, phpVersion.Str(), "composer.json > require > php")
 			}
@@ -450,8 +450,8 @@ func getPhpImage(phpVersion string) string {
 	return fmt.Sprintf("dunglas/frankenphp:php%s-bookworm", phpVersion)
 }
 
-func (p *PhpProvider) readComposerJson(ctx *generate.GenerateContext) (map[string]interface{}, error) {
-	var composerJson map[string]interface{}
+func (p *PhpProvider) readComposerJson(ctx *generate.GenerateContext) (map[string]any, error) {
+	var composerJson map[string]any
 	err := ctx.App.ReadJSON("composer.json", &composerJson)
 	if err != nil {
 		return nil, err

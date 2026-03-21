@@ -98,7 +98,7 @@ func (p *PackageJson) UnmarshalJSON(data []byte) error {
 	type Alias PackageJson
 	aux := &struct {
 		*Alias
-		Workspaces interface{} `json:"workspaces"`
+		Workspaces any `json:"workspaces"`
 	}{
 		Alias: (*Alias)(p),
 	}
@@ -109,14 +109,14 @@ func (p *PackageJson) UnmarshalJSON(data []byte) error {
 
 	// Handle workspaces field based on its type
 	switch w := aux.Workspaces.(type) {
-	case []interface{}:
+	case []any:
 		p.Workspaces = make([]string, len(w))
 		for i, v := range w {
 			if s, ok := v.(string); ok {
 				p.Workspaces[i] = s
 			}
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		// Try to unmarshal as WorkspacesObject
 		var wo WorkspacesObject
 		if b, err := json.Marshal(w); err == nil {

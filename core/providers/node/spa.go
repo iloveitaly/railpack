@@ -68,7 +68,7 @@ func (p *NodeProvider) DeploySPA(ctx *generate.GenerateContext, build *generate.
 	ctx.Logger.LogInfo("Deploying as %s static site", spaFramework)
 	ctx.Logger.LogInfo("Output directory: %s", outputDir)
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"DIST_DIR": path.Join("/app", outputDir),
 	}
 

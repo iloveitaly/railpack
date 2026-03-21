@@ -124,8 +124,8 @@ func (i *Layer) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		// "$stepname" represents a reference to another step
-		if strings.HasPrefix(str, "$") {
-			stepName := strings.TrimPrefix(str, "$")
+		if after, ok := strings.CutPrefix(str, "$"); ok {
+			stepName := after
 			*i = NewStepLayer(stepName)
 			return nil
 		}
@@ -193,7 +193,7 @@ func (Layer) JSONSchema() *jsonschema.Schema {
 	stringSchema := &jsonschema.Schema{
 		Type:        "string",
 		Description: "Strings will be parsed and interpreted as an input. Valid formats are: '.', '...', or '$step'",
-		Enum:        []interface{}{".", "..."},
+		Enum:        []any{".", "..."},
 	}
 
 	availableInputs := []*jsonschema.Schema{stepSchema, imageSchema, localSchema, stringSchema}

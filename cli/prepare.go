@@ -88,7 +88,7 @@ var PrepareCommand = &cli.Command{
 	},
 }
 
-func writeJSONFile(path string, data interface{}, logMessage string) error {
+func writeJSONFile(path string, data any, logMessage string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}

@@ -8,7 +8,7 @@ type Image struct {
 	specs.Image
 
 	// Config defines the execution parameters which should be used as a base when running a container using the image.
-	Config specs.ImageConfig `json:"config,omitempty"`
+	Config specs.ImageConfig `json:"config"`
 
 	// Variant defines platform variant. To be added to OCI.
 	Variant string `json:"variant,omitempty"`
