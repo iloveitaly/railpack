@@ -1,0 +1,8 @@
+[tools]
+python = "latest"
+
+[settings]
+python.compile = true
+
+[env]
+PYTHON_BUILD_FREE_THREADING = 1
