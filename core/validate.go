@@ -124,7 +124,7 @@ func getNoProviderError(app *app.App) string {
 		if i == len(dirs)-1 && len(files) == 0 {
 			prefix = "└── "
 		}
-		fileTree.WriteString(fmt.Sprintf("%s%s/\n", prefix, dir))
+		fmt.Fprintf(&fileTree, "%s%s/\n", prefix, dir)
 	}
 
 	for i, file := range files {
@@ -132,7 +132,7 @@ func getNoProviderError(app *app.App) string {
 		if i == len(files)-1 {
 			prefix = "└── "
 		}
-		fileTree.WriteString(fmt.Sprintf("%s%s\n", prefix, file))
+		fmt.Fprintf(&fileTree, "%s%s\n", prefix, file)
 	}
 
 	errorMsg := "Railpack could not determine how to build the app.\n\n"
