@@ -101,7 +101,7 @@ echo "Running modernization fixes..."
 mise run fix
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
   git add .
-  git commit -m "chore: modernize code with go fix"
+  git commit -m "refactor: modernize code with go fix"
 fi
 
 # Run checks, formatting, and other linting
@@ -110,8 +110,9 @@ mise run check
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
   git add .
-  git commit -m "chore: fix formatting"
+  git commit -m "style: fix formatting"
 fi
+
 
 # Push the branch (needed in CI and good practice locally)
 git push -u origin "$branch"
