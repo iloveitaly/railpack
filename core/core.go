@@ -43,7 +43,7 @@ type BuildResult struct {
 	Success           bool                                 `json:"success,omitempty"`
 }
 
-func readConfigJSON(path string, v interface{}) error {
+func readConfigJSON(path string, v any) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err

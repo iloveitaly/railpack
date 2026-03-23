@@ -15,9 +15,9 @@ func resolveToFuzzyVersion(version string) string {
 	if strings.Contains(version, ">=") || strings.Contains(version, "<") {
 		parts := strings.Fields(version)
 		for i, part := range parts {
-			if strings.HasPrefix(part, ">=") {
+			if after, ok := strings.CutPrefix(part, ">="); ok {
 				// Version number is either after the >= in this part, or in the next part
-				v := strings.TrimPrefix(part, ">=")
+				v := after
 				if v == "" && i+1 < len(parts) {
 					v = parts[i+1]
 				}
@@ -27,8 +27,8 @@ func resolveToFuzzyVersion(version string) string {
 	}
 
 	// Handle caret notation by only keeping major version
-	if strings.HasPrefix(version, "^") {
-		version = strings.TrimPrefix(version, "^")
+	if after, ok := strings.CutPrefix(version, "^"); ok {
+		version = after
 		parts := strings.Split(version, ".")
 		return parts[0]
 	}

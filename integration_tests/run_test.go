@@ -73,7 +73,6 @@ func TestExamplesIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, entry := range entries {
-		entry := entry // capture for parallel execution
 		if !entry.IsDir() {
 			continue
 		}
@@ -115,8 +114,6 @@ func TestExamplesIntegration(t *testing.T) {
 
 		// each entry in the tests.json array is an individual test case which runs it's own container
 		for i, testCase := range testCases {
-			testCase := testCase // capture for parallel execution
-			i := i
 
 			testName := fmt.Sprintf("%s/case-%d", entry.Name(), i)
 			t.Run(testName, func(t *testing.T) {
@@ -251,7 +248,7 @@ func getFolderSizes(imageName string) (map[string]int64, error) {
 
 	skip := map[string]bool{"/proc": true, "/sys": true, "/dev": true}
 	sizes := map[string]int64{}
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		if line == "" {
 			continue
 		}

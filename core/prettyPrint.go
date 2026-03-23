@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -293,12 +294,7 @@ func getCommandsToPrint(commands []plan.Command) []plan.ExecCommand {
 }
 
 func isSkippableCommand(cmd string) bool {
-	for _, skippable := range skippableCommands {
-		if cmd == skippable {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(skippableCommands, cmd)
 }
 
 func formatSource(pkg *resolver.ResolvedPackage) string {
@@ -306,11 +302,4 @@ func formatSource(pkg *resolver.ResolvedPackage) string {
 		return fmt.Sprintf("%s (%s)", pkg.Source, *pkg.RequestedVersion)
 	}
 	return pkg.Source
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

@@ -163,8 +163,8 @@ func (p *GoProvider) InstallGoDeps(ctx *generate.GenerateContext, install *gener
 func (p *GoProvider) extractGoVersionFromMod(ctx *generate.GenerateContext) string {
 	if goModContents, err := ctx.App.ReadFile("go.mod"); err == nil {
 		// Split content into lines and look for "go X.XX" line
-		lines := strings.Split(string(goModContents), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(string(goModContents), "\n")
+		for line := range lines {
 			if strings.HasPrefix(strings.TrimSpace(line), "go ") {
 				// Extract version number
 				if goVersion := strings.TrimSpace(strings.TrimPrefix(line, "go")); goVersion != "" {

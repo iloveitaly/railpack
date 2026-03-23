@@ -59,7 +59,7 @@ func TestAppReadJsonWithComments(t *testing.T) {
 	app, err := NewApp("../../examples/config-file")
 	require.NoError(t, err)
 
-	var config map[string]interface{}
+	var config map[string]any
 	err = app.ReadJSON("hello.jsonc", &config)
 	require.NoError(t, err)
 	require.Equal(t, config["hello"], "world")

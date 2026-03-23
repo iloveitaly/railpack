@@ -13,7 +13,7 @@ type TemplateFileResult struct {
 
 // TemplateFiles will look the first file that exists in the list of potential files and render it with the given data
 // If no file is found, it will use the default contents and render it with the given data
-func (c *GenerateContext) TemplateFiles(potentialFiles []string, defaultContents string, data map[string]interface{}) (*TemplateFileResult, error) {
+func (c *GenerateContext) TemplateFiles(potentialFiles []string, defaultContents string, data map[string]any) (*TemplateFileResult, error) {
 	contents := defaultContents
 	filename := ""
 

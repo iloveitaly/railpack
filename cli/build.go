@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/railwayapp/railpack/buildkit"
 	"github.com/railwayapp/railpack/core"
@@ -122,11 +123,11 @@ func validateSecrets(plan *plan.BuildPlan, env *app.Environment) error {
 
 // generate a hash all of build secrets to invalidate all caches when any secret changes
 func getSecretsHash(env *app.Environment) string {
-	secretsValue := ""
+	var secretsValue strings.Builder
 	for _, v := range env.Variables {
-		secretsValue += v
+		secretsValue.WriteString(v)
 	}
 	hasher := sha256.New()
-	hasher.Write([]byte(secretsValue))
+	hasher.Write([]byte(secretsValue.String()))
 	return fmt.Sprintf("%x", hasher.Sum(nil))
 }

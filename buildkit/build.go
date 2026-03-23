@@ -286,8 +286,8 @@ func getImageName(appDir string) string {
 // Helper function to parse key=value strings into a map
 func parseKeyValue(s string) map[string]string {
 	attrs := make(map[string]string)
-	parts := strings.Split(s, ",")
-	for _, part := range parts {
+	parts := strings.SplitSeq(s, ",")
+	for part := range parts {
 		kv := strings.SplitN(part, "=", 2)
 		if len(kv) == 2 {
 			attrs[kv[0]] = kv[1]

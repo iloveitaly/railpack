@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/railwayapp/railpack/core/app"
 	"github.com/railwayapp/railpack/core/logger"
@@ -115,14 +116,15 @@ func getNoProviderError(app *app.App) string {
 	files, _ := app.FindFiles("*")
 	dirs, _ := app.FindDirectories("*")
 
-	fileTree := "./\n"
+	var fileTree strings.Builder
+	fileTree.WriteString("./\n")
 
 	for i, dir := range dirs {
 		prefix := "├── "
 		if i == len(dirs)-1 && len(files) == 0 {
 			prefix = "└── "
 		}
-		fileTree += fmt.Sprintf("%s%s/\n", prefix, dir)
+		fmt.Fprintf(&fileTree, "%s%s/\n", prefix, dir)
 	}
 
 	for i, file := range files {
@@ -130,7 +132,7 @@ func getNoProviderError(app *app.App) string {
 		if i == len(files)-1 {
 			prefix = "└── "
 		}
-		fileTree += fmt.Sprintf("%s%s\n", prefix, file)
+		fmt.Fprintf(&fileTree, "%s%s\n", prefix, file)
 	}
 
 	errorMsg := "Railpack could not determine how to build the app.\n\n"
@@ -140,7 +142,7 @@ func getNoProviderError(app *app.App) string {
 	}
 
 	errorMsg += "\nThe app contents that Railpack analyzed contains:\n\n"
-	errorMsg += fileTree
+	errorMsg += fileTree.String()
 	errorMsg += "\n"
 	errorMsg += "Check out the docs for more information: https://railpack.com"
 

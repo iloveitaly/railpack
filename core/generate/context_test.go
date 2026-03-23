@@ -92,7 +92,7 @@ func TestGenerateContext(t *testing.T) {
 	buildPlanJSON, err := json.MarshalIndent(buildPlan, "", "  ")
 	require.NoError(t, err)
 
-	var actualPlan map[string]interface{}
+	var actualPlan map[string]any
 	require.NoError(t, json.Unmarshal(buildPlanJSON, &actualPlan))
 
 	serializedPlan, err := json.MarshalIndent(actualPlan, "", "  ")

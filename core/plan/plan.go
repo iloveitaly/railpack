@@ -15,12 +15,12 @@ type BuildPlan struct {
 	Steps   []Step            `json:"steps,omitempty"`
 	Caches  map[string]*Cache `json:"caches,omitempty"`
 	Secrets []string          `json:"secrets,omitempty"`
-	Deploy  Deploy            `json:"deploy,omitempty"`
+	Deploy  Deploy            `json:"deploy"`
 }
 
 type Deploy struct {
 	// The base layer for the deploy step
-	Base Layer `json:"base,omitempty"`
+	Base Layer `json:"base"`
 
 	// The layers for the deploy step
 	Inputs []Layer `json:"inputs,omitempty"`
@@ -102,7 +102,7 @@ func (p *BuildPlan) Normalize() {
 	// break as we've already collected all reachable steps.
 	maxIterations := len(p.Steps) * len(p.Steps) // Maximum possible unique edges in a directed graph
 
-	for iterations := 0; iterations < maxIterations; iterations++ {
+	for range maxIterations {
 		newReferences := false
 		for _, step := range p.Steps {
 			// Skip if this step isn't referenced

@@ -111,7 +111,7 @@ func UnmarshalCommand(data []byte) (Command, error) {
 
 func UnmarshalJsonCommand(data []byte) (Command, error) {
 	// Try to unmarshal as JSON object
-	var rawMap map[string]interface{}
+	var rawMap map[string]any
 	if err := json.Unmarshal(data, &rawMap); err != nil {
 		return nil, err
 	}

@@ -85,7 +85,7 @@ func (p *StaticfileProvider) StartCommandHelp() string {
 func (p *StaticfileProvider) addCaddyfileToStep(ctx *generate.GenerateContext, setup *generate.CommandStepBuilder) error {
 	ctx.Logger.LogInfo("Using root dir: %s", p.RootDir)
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"STATIC_FILE_ROOT": p.RootDir,
 	}
 

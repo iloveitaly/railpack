@@ -88,6 +88,11 @@ run = [
   "echo 'test: update snapshots' > $(git rev-parse --git-dir)/COMMIT_EDITMSG",
 ]
 
+# modernize code using the latest Go fixers
+[tasks.fix]
+description = "Modernize code using the latest Go fixers"
+run = "go fix ./..."
+
 # linting, formatting, and static analysis
 [tasks.check]
 run = ["go vet ./...", "go fmt ./...", "golangci-lint run", "go mod verify"]

@@ -6,7 +6,7 @@ import (
 
 // MergeStructs merges multiple structs of the same type, with later values taking precedence.
 // Only non-zero values from later structs will override earlier values.
-func MergeStructs(dst interface{}, srcs ...interface{}) {
+func MergeStructs(dst any, srcs ...any) {
 	for _, src := range srcs {
 		if src == nil {
 			continue
@@ -16,11 +16,11 @@ func MergeStructs(dst interface{}, srcs ...interface{}) {
 }
 
 // mergeStruct merges two structs of the same type, taking non-zero values from src
-func mergeStruct(dst, src interface{}) {
+func mergeStruct(dst, src any) {
 	dstValue := reflect.ValueOf(dst).Elem()
 	srcValue := reflect.ValueOf(src)
 
-	if srcValue.Kind() == reflect.Ptr {
+	if srcValue.Kind() == reflect.Pointer {
 		srcValue = srcValue.Elem()
 	}
 
@@ -44,7 +44,7 @@ func mergeStruct(dst, src interface{}) {
 				dstField.Set(srcField)
 			}
 
-		case reflect.Ptr:
+		case reflect.Pointer:
 			mergePtr(dstField, srcField)
 
 		case reflect.Struct:
@@ -71,7 +71,7 @@ func mergeMap(dst, src reflect.Value) {
 		srcValue := src.MapIndex(key)
 		dstValue := dst.MapIndex(key)
 
-		if srcValue.Kind() == reflect.Ptr && srcValue.Elem().Kind() == reflect.Struct {
+		if srcValue.Kind() == reflect.Pointer && srcValue.Elem().Kind() == reflect.Struct {
 			if !dstValue.IsValid() {
 				dst.SetMapIndex(key, srcValue)
 			} else {
@@ -119,12 +119,12 @@ func isZeroValue(v reflect.Value) bool {
 		return v.Uint() == 0
 	case reflect.Float32, reflect.Float64:
 		return v.Float() == 0
-	case reflect.Interface, reflect.Ptr:
+	case reflect.Interface, reflect.Pointer:
 		return v.IsNil()
 	case reflect.Struct:
 		// For structs, check if all fields are zero values
-		for i := 0; i < v.NumField(); i++ {
-			if !isZeroValue(v.Field(i)) {
+		for _, field := range v.Fields() {
+			if !isZeroValue(field) {
 				return false
 			}
 		}

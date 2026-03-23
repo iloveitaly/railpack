@@ -39,7 +39,7 @@ type ComposeConfig struct {
 // detectAndStartCompose checks if a docker-compose.yml exists in the example directory
 // and starts the services with a unique network name. Returns nil if no compose file exists or is empty.
 func detectAndStartCompose(examplePath string, t interface {
-	Logf(format string, args ...interface{})
+	Logf(format string, args ...any)
 }) (*ComposeConfig, error) {
 	composeFile := filepath.Join(examplePath, "docker-compose.yml")
 
@@ -83,7 +83,7 @@ func detectAndStartCompose(examplePath string, t interface {
 
 // stopAndCleanupCompose stops and removes docker-compose services
 func stopAndCleanupCompose(config *ComposeConfig, logger interface {
-	Logf(format string, args ...interface{})
+	Logf(format string, args ...any)
 }) error {
 	if config == nil {
 		return nil
