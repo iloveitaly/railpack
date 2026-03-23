@@ -100,7 +100,11 @@ func (b *MiseStepBuilder) AddSupportingAptPackage(name string) {
 }
 
 // AddMiseSetting adds a setting to the generated mise.toml [settings] section.
-// Dotted keys (e.g. "python.compile") are expanded into nested maps for TOML encoding.
+// Callers use dot-paths (e.g. "python.compile") so all mise settings are easy to grep for.
+// This method expands them into nested maps because the TOML encoder would otherwise
+// emit a quoted literal key ("python.compile") instead of a proper [settings.python] section.
+// It also merges keys: independent callers can set "node.verify" and "node.corepack"
+// without clobbering each other.
 func (b *MiseStepBuilder) AddMiseSetting(key string, value any) {
 	parts := strings.SplitN(key, ".", 2)
 	if len(parts) == 1 {
