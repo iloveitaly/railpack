@@ -73,14 +73,17 @@ if [[ "$new" != "$latest" ]]; then
   exit 1
 fi
 
-# If nothing changed, stop early
+# although there are other updates below that are NOT tied to mise, linking all maint work to a mise upgrade
+# eliminates daily PRs which would be annoying and groups these changes with important updates (mise versions)
+# which impact our users.
 if git diff --quiet -- "$file"; then
   echo "mise version already set to $latest. Nothing to do."
   exit 0
 fi
 
+# `fix` scope because mise versions do impact the end-user functionality
 git add -- "$file"
-git commit -m "chore: update mise to $latest"
+git commit -m "fix: update mise to $latest"
 
 # Update snapshots before running any assertion tests — a new mise version
 # will always produce different snapshots, so assertions must come after.
@@ -89,25 +92,22 @@ if ! git diff --cached --quiet; then
   git commit -F "$(git rev-parse --git-dir)/COMMIT_EDITMSG"
 fi
 
-echo "Upgrading go packages..."
-mise run upgrade-go-packages
+echo "Upgrading go and mise packages..."
+mise run upgrade
 if [[ -n "$(git status --porcelain go.mod go.sum)" ]]; then
   git add go.mod go.sum
-  git commit -m "chore: update go packages"
+  git commit -m "chore: update go, mise, and bun packages"
 fi
 
-# Run modernization fixes
-echo "Running modernization fixes..."
+echo "Running autofix fixes..."
 mise run fix
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
   git add .
   git commit -m "refactor: modernize code with go fix"
 fi
 
-# Run checks, formatting, and other linting
 echo "Running checks and linting..."
 mise run check
-
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
   git add .
   git commit -m "style: fix formatting"

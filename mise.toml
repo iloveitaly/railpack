@@ -4,11 +4,23 @@ RAILPACK_MISE_VERSION = "{{read_file(path='core/mise/version.txt')}}"
 
 _.path = './bin'
 
+[tools]
+go = "1.26"
+golangci-lint = "latest"
+bun = "1.3"
+
+[settings]
+experimental = true
+# without this, navigating into various examples/ will output an annoying warning
+idiomatic_version_file_enable_tools = ["python", "node", "ruby"]
+# ensures homebrew go, etc doesn't take precedence
+activate_aggressive = true
+env_shell_expand = true
+
 [tasks.setup]
 run = [
   "mise install",
   "mise run run-buildkit-container || true",
-  "mise run tidy",
 ]
 
 [tasks.run-buildkit-container]
@@ -17,6 +29,7 @@ run = "docker run --rm --privileged -d --name buildkit -e BUILDKIT_DEBUG=1 moby/
 [tasks.cli]
 run = "go run cmd/cli/main.go"
 
+# run a go debugging against the CLI entrypoint
 [tasks.debug-cli]
 run = "dlv debug github.com/railwayapp/railpack/cmd/cli --"
 
@@ -42,7 +55,6 @@ run = [
 
 # if a example folder does not have a test.json file, it will be skipped
 [tasks.examples-without-tests]
-
 run = "find examples -mindepth 1 -maxdepth 1 -type d ! -exec [ -f \"{}/test.json\" ] \\; -print "
 
 # run unit tests
@@ -91,20 +103,25 @@ run = [
 # modernize code using the latest Go fixers
 [tasks.fix]
 description = "Modernize code using the latest Go fixers"
-run = "go fix ./..."
+run = ["golangci-lint run --fix",
+  "go fix ./..."]
 
 # linting, formatting, and static analysis
 [tasks.check]
 run = ["go vet ./...", "go fmt ./...", "golangci-lint run", "go mod verify"]
 
-[tasks.tidy]
-run = "go mod tidy"
-
-[tasks.upgrade-go-packages]
-description = "Upgrade all Go packages and tidy the module"
+[tasks.upgrade]
+description = "Upgrade all Go and Mise packages"
 run = [
+  # ensures we are using the latest version of mise locally
+  "mise self-update",
+  # updates lockfiles
+  "mise upgrade --local",
+  # get latest go packages
   "go get -u ./...",
-  "go mod tidy"
+  "go mod tidy",
+  # update packages, respecting semver
+  "cd docs && bun update"
 ]
 
 # build docs for production
@@ -121,16 +138,3 @@ run = "docker build --build-arg MISE_VERSION=$RAILPACK_MISE_VERSION -f images/de
 
 [tasks.image-runtime-build]
 run = "docker build -f images/debian/runtime/Dockerfile -t railpack-runtime:local ."
-
-[tools]
-go = "1.26"
-"github:golangci/golangci-lint" = "2"
-bun = "1.3"
-
-[settings]
-experimental = true
-# without this, navigating into various examples/ will output an annoying warning
-idiomatic_version_file_enable_tools = ["python", "node", "ruby"]
-# ensures homebrew go, etc doesn't take precedence
-activate_aggressive = true
-env_shell_expand = true
