@@ -135,16 +135,17 @@ func getNoProviderError(app *app.App) string {
 		fmt.Fprintf(&fileTree, "%s%s\n", prefix, file)
 	}
 
-	errorMsg := "Railpack could not determine how to build the app.\n\n"
-	errorMsg += "The following languages are supported:\n"
+	var errorMsg strings.Builder
+	errorMsg.WriteString("Railpack could not determine how to build the app.\n\n")
+	errorMsg.WriteString("The following languages are supported:\n")
 	for _, provider := range providerNames {
-		errorMsg += fmt.Sprintf("- %s\n", provider)
+		errorMsg.WriteString(fmt.Sprintf("- %s\n", provider))
 	}
 
-	errorMsg += "\nThe app contents that Railpack analyzed contains:\n\n"
-	errorMsg += fileTree.String()
-	errorMsg += "\n"
-	errorMsg += "Check out the docs for more information: https://railpack.com"
+	errorMsg.WriteString("\nThe app contents that Railpack analyzed contains:\n\n")
+	errorMsg.WriteString(fileTree.String())
+	errorMsg.WriteString("\n")
+	errorMsg.WriteString("Check out the docs for more information: https://railpack.com")
 
-	return errorMsg
+	return errorMsg.String()
 }
