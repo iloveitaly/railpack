@@ -1,0 +1,6 @@
+[project]
+name = "python-freethreaded"
+version = "0.1.0"
+description = "Test free-threaded (GIL-disabled) Python support"
+requires-python = ">=3.13"
+dependencies = []

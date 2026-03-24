@@ -1,0 +1,16 @@
+[
+  {
+    // python.compile = true + PYTHON_BUILD_FREE_THREADING = 1 in mise.toml compiles a freethreaded Python from source
+    "expectedOutput": "Free-threaded build: True"
+  },
+  {
+    // Run under x86 emulation to verify the precompiled freethreaded flavor works on amd64.
+    // MISE_PYTHON_COMPILE=0 overrides python.compile = true from mise.toml (env vars beat project config).
+    "platform": "linux/amd64",
+    "expectedOutput": ["Free-threaded build: True", "x86_64"],
+    "envs": {
+      "MISE_PYTHON_COMPILE": "0",
+      "MISE_PYTHON_PRECOMPILED_FLAVOR": "freethreaded+pgo-full"
+    }
+  }
+]
