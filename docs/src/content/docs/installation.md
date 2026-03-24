@@ -51,3 +51,7 @@ go build -o railpack ./cmd/...
 Linux and MacOS are supported.
 
 Windows builds are generated but not officially supported. That being said, PRs are welcome to fix any Windows-specific bugs.
+
+## Help
+
+Need help? Check out our [Help page](/help) for support options.
