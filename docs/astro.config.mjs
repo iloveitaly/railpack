@@ -3,6 +3,7 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import starlightLlmsTxt from "starlight-llms-txt";
+import starlightPageActions from "starlight-page-actions";
 
 // https://astro.build/config
 export default defineConfig({
@@ -34,6 +35,7 @@ export default defineConfig({
         "@fontsource/inter/600.css",
       ],
       plugins: [
+        starlightPageActions(),
         starlightLlmsTxt({
           projectName: "Railpack",
           description:
