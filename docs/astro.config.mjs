@@ -108,6 +108,10 @@ export default defineConfig({
           link: "/installation",
         },
         {
+          label: "Help",
+          link: "/help",
+        },
+        {
           label: "Guides",
           items: [
             {
