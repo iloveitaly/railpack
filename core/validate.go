@@ -139,7 +139,7 @@ func getNoProviderError(app *app.App) string {
 	errorMsg.WriteString("Railpack could not determine how to build the app.\n\n")
 	errorMsg.WriteString("The following languages are supported:\n")
 	for _, provider := range providerNames {
-		errorMsg.WriteString(fmt.Sprintf("- %s\n", provider))
+		fmt.Fprintf(&errorMsg, "- %s\n", provider)
 	}
 
 	errorMsg.WriteString("\nThe app contents that Railpack analyzed contains:\n\n")
