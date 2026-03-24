@@ -13,7 +13,7 @@ incorporates many of the learnings from running Nixpacks in production at
 ```bash
 # Install mise & railpack
 curl -sSL https://mise.run | sh
-mise install ubi:railwayapp/railpack@latest
+mise install github:railwayapp/railpack@latest
 
 # start BuildKit container & let railpack know about it
 docker run --rm --privileged -d --name buildkit moby/buildkit
