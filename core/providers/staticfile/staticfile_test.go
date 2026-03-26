@@ -59,6 +59,24 @@ func TestGetRootDir(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name: "trimmed env var",
+			path: "../../../examples/staticfile-index",
+			envVars: map[string]string{
+				"RAILPACK_STATIC_FILE_ROOT": "  /custom/path  ",
+			},
+			want:        "/custom/path",
+			expectError: false,
+		},
+		{
+			name: "blank env var falls back",
+			path: "../../../examples/staticfile-index",
+			envVars: map[string]string{
+				"RAILPACK_STATIC_FILE_ROOT": "   ",
+			},
+			want:        ".",
+			expectError: false,
+		},
+		{
 			name:        "from staticfile config",
 			path:        "../../../examples/staticfile-config",
 			envVars:     map[string]string{},

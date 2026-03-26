@@ -6,6 +6,7 @@ package staticfile
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 
 	"github.com/railwayapp/railpack/core/generate"
 	"github.com/railwayapp/railpack/core/plan"
@@ -19,32 +20,26 @@ const (
 	CaddyfilePath        = "Caddyfile"
 )
 
+// Staticfile in a directory is parsed into this structure
 type StaticfileConfig struct {
 	RootDir string `yaml:"root"`
+	// IndexFallback controls whether to fall back to index.html for unmatched routes (default: true)
+	IndexFallback *bool `yaml:"index_fallback"`
 }
 
-type StaticfileProvider struct {
-	RootDir string
-}
+type StaticfileProvider struct{}
 
 func (p *StaticfileProvider) Name() string {
 	return "staticfile"
 }
 
 func (p *StaticfileProvider) Initialize(ctx *generate.GenerateContext) error {
-	rootDir, err := getRootDir(ctx)
-	if err != nil {
-		return err
-	}
-
-	p.RootDir = rootDir
-
 	return nil
 }
 
 func (p *StaticfileProvider) Detect(ctx *generate.GenerateContext) (bool, error) {
-	rootDir, err := getRootDir(ctx)
-	if rootDir != "" && err == nil {
+	_, err := getRootDir(ctx)
+	if err == nil {
 		return true, nil
 	}
 
@@ -52,15 +47,20 @@ func (p *StaticfileProvider) Detect(ctx *generate.GenerateContext) (bool, error)
 }
 
 func (p *StaticfileProvider) Plan(ctx *generate.GenerateContext) error {
+	rootDir, err := getRootDir(ctx)
+	if err != nil {
+		return err
+	}
+
+	// NOTE `latest` is not used intentionally here as the Caddyfile template should be tested against major caddy upgrades
 	installCaddyStep := ctx.NewInstallBinStepBuilder("packages:caddy")
-	installCaddyStep.Default("caddy", "latest")
+	installCaddyStep.Default("caddy", "2")
 
 	build := ctx.NewCommandStep("build")
 	build.AddInput(plan.NewStepLayer(installCaddyStep.Name()))
 	build.AddInput(ctx.NewLocalLayer())
 
-	err := p.addCaddyfileToStep(ctx, build)
-	if err != nil {
+	if err := p.addCaddyfileToStep(ctx, build, rootDir, getIndexFallback(ctx)); err != nil {
 		return err
 	}
 
@@ -79,17 +79,24 @@ func (p *StaticfileProvider) Plan(ctx *generate.GenerateContext) error {
 func (p *StaticfileProvider) CleansePlan(buildPlan *plan.BuildPlan) {}
 
 func (p *StaticfileProvider) StartCommandHelp() string {
-	return ""
+	return "Railpack serves static files using Caddy. To configure the static file root, Railpack will check:\n\n" +
+		"1. The RAILPACK_STATIC_FILE_ROOT environment variable\n\n" +
+		"2. The \"root\" field in a Staticfile in your project root:\n" +
+		"   root: dist\n\n" +
+		"3. A \"public\" directory\n\n" +
+		"4. An index.html in your project root\n\n" +
+		"To enable SPA-style index.html fallback for unmatched routes, set \"index_fallback: true\" in your Staticfile."
 }
 
-func (p *StaticfileProvider) addCaddyfileToStep(ctx *generate.GenerateContext, setup *generate.CommandStepBuilder) error {
-	ctx.Logger.LogInfo("Using root dir: %s", p.RootDir)
+func (p *StaticfileProvider) addCaddyfileToStep(ctx *generate.GenerateContext, setup *generate.CommandStepBuilder, rootDir string, indexFallback bool) error {
+	ctx.Logger.LogInfo("Using staticfile root dir: %s", rootDir)
 
-	data := map[string]any{
-		"STATIC_FILE_ROOT": p.RootDir,
+	caddyfileTemplateVariables := map[string]any{
+		"StaticFileRoot": rootDir,
+		"IndexFallback":  indexFallback,
 	}
 
-	caddyfileTemplate, err := ctx.TemplateFiles([]string{"Caddyfile.template", "Caddyfile"}, caddyfileTemplate, data)
+	caddyfileTemplate, err := ctx.TemplateFiles([]string{"Caddyfile.template", "Caddyfile"}, caddyfileTemplate, caddyfileTemplateVariables)
 	if err != nil {
 		return err
 	}
@@ -110,14 +117,21 @@ func (p *StaticfileProvider) addCaddyfileToStep(ctx *generate.GenerateContext, s
 	return nil
 }
 
+// only returns an empty string if no root dir can be found
 func getRootDir(ctx *generate.GenerateContext) (string, error) {
 	if rootDir, _ := ctx.Env.GetConfigVariable("STATIC_FILE_ROOT"); rootDir != "" {
-		return rootDir, nil
+		rootDir = strings.TrimSpace(rootDir)
+		if rootDir != "" {
+			return rootDir, nil
+		}
 	}
 
 	staticfileConfig, err := getStaticfileConfig(ctx)
 	if staticfileConfig != nil && err == nil {
-		return staticfileConfig.RootDir, nil
+		rootDir := strings.TrimSpace(staticfileConfig.RootDir)
+		if rootDir != "" {
+			return rootDir, nil
+		}
 	}
 
 	if ctx.App.HasMatch("public") {
@@ -129,6 +143,17 @@ func getRootDir(ctx *generate.GenerateContext) (string, error) {
 	return "", fmt.Errorf("no static file root dir found")
 }
 
+func getIndexFallback(ctx *generate.GenerateContext) bool {
+	// TODO we probably want to add a ENV var for this config option in the future
+	config, err := getStaticfileConfig(ctx)
+	if config != nil && err == nil && config.IndexFallback != nil {
+		return *config.IndexFallback
+	}
+
+	return false
+}
+
+// convert a Staticfile in the app source into a struct that we can read options from
 func getStaticfileConfig(ctx *generate.GenerateContext) (*StaticfileConfig, error) {
 	if !ctx.App.HasFile(StaticfileConfigName) {
 		return nil, nil
