@@ -61,6 +61,7 @@ func main() {
 			&urfave.BoolFlag{
 				Name:        "verbose",
 				Usage:       "Enable verbose logging",
+				Sources:     urfave.EnvVars("RAILPACK_VERBOSE"),
 				Value:       false,
 				Destination: &verbose,
 			},
