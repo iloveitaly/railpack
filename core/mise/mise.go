@@ -188,15 +188,19 @@ func (m *Mise) runCmdWithEnv(extraEnv []string, args ...string) (string, error) 
 		cmd.Env = append(cmd.Env, extraEnv...)
 	}
 
-	log.Debugf("Running mise command with env: %v", cmd.Env)
+	cmdStr := strings.Join(append([]string{m.binaryPath}, args...), " ")
+	log.Debugf("Running mise command %s with env: %v", cmdStr, cmd.Env)
 
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to run mise command '%s': %w\n%s\n\n%s",
-			strings.Join(append([]string{m.binaryPath}, args...), " "),
+			cmdStr,
 			err,
 			stdout.String(),
 			stderr.String())
 	}
+
+	log.Debugf("Mise stdout: %s", stdout.String())
+	log.Debugf("Mise stderr: %s", stderr.String())
 
 	return stdout.String(), nil
 }
