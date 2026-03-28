@@ -29,12 +29,20 @@ The provider determines the root directory in this order:
 
 ### Staticfile
 
-You can configure the root directory with a `Staticfile` that contains the contents:
+You can configure static file serving with a `Staticfile` in your project
+root:
 
 ```yaml
 # root directory to serve
 root: dist
+
+# enable SPA routing: fall back to index.html for unmatched routes
+index_fallback: true
 ```
+
+`index_fallback` defaults to `false`. Enable it for single-page applications
+(React, Vue, Angular, etc.) where the frontend router handles all routes and
+the server should always serve `index.html` for unmatched paths.
 
 ### Config Variables
 

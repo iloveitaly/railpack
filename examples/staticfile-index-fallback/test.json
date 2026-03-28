@@ -1,0 +1,19 @@
+[
+  {
+    "httpCheck": {
+      "internalPort": 80,
+      "path": "/",
+      "expected": 200,
+      "expectedOutput": "Railpack Static File"
+    }
+  },
+  {
+    // non-existent routes should fall back to index.html
+    "httpCheck": {
+      "internalPort": 80,
+      "path": "/nonexistent",
+      "expected": 200,
+      "expectedOutput": "Railpack Static File"
+    }
+  }
+]

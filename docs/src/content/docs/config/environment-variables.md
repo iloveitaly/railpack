@@ -30,6 +30,7 @@ To configure more parts of the build, it is recommended to use a [config file](/
 
 These environment variables affect the behavior of Railpack:
 
-| Name          | Description                                 |
-| :------------ | :------------------------------------------ |
-| `FORCE_COLOR` | Force colored output even when not in a TTY |
+| Name              | Description                                 |
+| :---------------- | :------------------------------------------ |
+| `FORCE_COLOR`     | Force colored output even when not in a TTY |
+| `RAILPACK_VERBOSE` | Enable verbose logging (equivalent to `--verbose` flag) |
