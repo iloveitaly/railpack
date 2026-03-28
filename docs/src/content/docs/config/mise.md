@@ -18,6 +18,19 @@ ruby versions, and add additional utilities like `jq` to your image all through 
   source code. However, this global configuration is set in `/etc/mise/config.toml`
   so it can easily be overwritten in your application.
 
+## Default Settings
+
+Railpack sets the following mise settings by default in the generated
+`/etc/mise/config.toml`. These can be overridden in your own `mise.toml`.
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| `paranoid` | `true` | Enforces HTTPS and stricter security validation |
+| `trusted_config_paths` | `["/app"]` | Trusts app config files to avoid warnings during build |
+| `idiomatic_version_file_enable_tools` | *(language list)* | Auto-reads version files like `.node-version`, `.python-version`, etc. |
+| `install_before` | `"14d"` | Only resolves tool versions released more than 14 days ago, avoiding newly-released versions that may be broken |
+| `node.verify` | `false` | Skips asset signature verification for Node, since recently released versions may not yet have a public key |
+
 ## Customization
 
 Use a mise configuration file or environment variables to customize mise in the Railpack-generated container.
