@@ -20,6 +20,7 @@ import (
 type BuildStepOptions struct {
 	ResolvedPackages map[string]*resolver.ResolvedPackage
 	Caches           *CacheContext
+	UserVariables    map[string]string
 }
 
 type StepBuilder interface {
@@ -37,8 +38,9 @@ type GenerateContext struct {
 	Steps     []StepBuilder
 	Deploy    *DeployBuilder
 
-	Caches  *CacheContext
-	Secrets []string
+	Caches        *CacheContext
+	Secrets       []string
+	UserVariables map[string]string
 
 	SubContexts []string
 
@@ -78,8 +80,7 @@ func NewGenerateContext(app *a.App, env *a.Environment, config *config.Config, l
 	if dockerignoreCtx.HasFile {
 		logger.LogInfo("Found .dockerignore file, applying filters")
 
-		log.Debugf("Dockerignore exclude patterns: %v", dockerignoreCtx.Excludes)
-		log.Debugf("Dockerignore include patterns: %v", dockerignoreCtx.Includes)
+		log.Debugf("Dockerignore patterns: %v", dockerignoreCtx.Excludes)
 	}
 
 	ctx := &GenerateContext{
@@ -90,6 +91,7 @@ func NewGenerateContext(app *a.App, env *a.Environment, config *config.Config, l
 		Deploy:          NewDeployBuilder(),
 		Caches:          NewCacheContext(),
 		Secrets:         []string{},
+		UserVariables:   make(map[string]string),
 		Metadata:        NewMetadata(),
 		Resolver:        resolver,
 		Logger:          logger,
@@ -156,9 +158,18 @@ func (c *GenerateContext) Generate() (*plan.BuildPlan, map[string]*resolver.Reso
 	// Create the actual build plan
 	buildPlan := plan.NewBuildPlan()
 
+	// Merge exclude patterns from .dockerignore and railpack.json
+	excludePatterns := []string{}
+	excludePatterns = append(excludePatterns, c.dockerignoreCtx.Excludes...)
+	excludePatterns = append(excludePatterns, c.Config.Exclude...)
+	if len(excludePatterns) > 0 {
+		buildPlan.Exclude = excludePatterns
+	}
+
 	buildStepOptions := &BuildStepOptions{
 		ResolvedPackages: resolvedPackages,
 		Caches:           c.Caches,
+		UserVariables:    c.UserVariables,
 	}
 
 	for _, stepBuilder := range c.Steps {
@@ -265,18 +276,8 @@ func (c *GenerateContext) applyConfig() {
 	}
 }
 
-// creates a local layer with dockerignore patterns applied
 func (c *GenerateContext) NewLocalLayer() plan.Layer {
-	layer := plan.NewLocalLayer()
-
-	if len(c.dockerignoreCtx.Includes) > 0 {
-		layer.Include = append(layer.Include, c.dockerignoreCtx.Includes...)
-	}
-	if len(c.dockerignoreCtx.Excludes) > 0 {
-		layer.Exclude = append(layer.Exclude, c.dockerignoreCtx.Excludes...)
-	}
-
-	return layer
+	return plan.NewLocalLayer()
 }
 
 // in order to get around a circular dependency issue, we need to define discrete getters to interface with

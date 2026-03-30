@@ -37,12 +37,18 @@ const (
 func ConvertPlanToLLB(plan *p.BuildPlan, opts ConvertPlanOptions) (*llb.State, *Image, error) {
 	platform := opts.BuildPlatform
 
-	localState := llb.Local("context",
+	localOpts := []llb.LocalOption{
 		llb.SharedKeyHint("local"),
 		llb.SessionID(opts.SessionID),
 		llb.WithCustomName("loading ."),
-		llb.FollowPaths([]string{"."}),
-	)
+		// llb.FollowPaths([]string{"."}),
+	}
+
+	if len(plan.Exclude) > 0 {
+		localOpts = append(localOpts, llb.ExcludePatterns(plan.Exclude))
+	}
+
+	localState := llb.Local("context", localOpts...)
 
 	cacheStore := build_llb.NewBuildKitCacheStore(opts.CacheKey)
 	graph, err := build_llb.NewBuildGraph(plan, &localState, cacheStore, opts.SecretsHash, &platform, opts.GitHubToken)
