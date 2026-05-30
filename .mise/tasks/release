@@ -33,10 +33,12 @@ def run_command(command, check=True, capture_output=False, text=True, cwd=None):
 
 def get_ai_tool():
     """Determines the available AI tool (gemini or claude) and returns the command."""
-    if shutil.which("gemini"):
+    if shutil.which("gemini") and False:
         return 'gemini'
-    elif shutil.which("claude"):
+    elif shutil.which("claude") and False:
         return 'claude -p'
+    elif shutil.which("cursor-agent"):
+        return "cursor-agent -p"
     else:
         click.secho("Error: Could not find 'gemini' or 'claude' executable in PATH.", fg="red", err=True)
         sys.exit(1)
