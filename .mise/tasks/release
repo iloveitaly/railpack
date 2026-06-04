@@ -32,15 +32,15 @@ def run_command(command, check=True, capture_output=False, text=True, cwd=None):
         sys.exit(1)
 
 def get_ai_tool():
-    """Determines the available AI tool (gemini or claude) and returns the command."""
-    if shutil.which("gemini") and False:
-        return 'gemini'
+    """Determines the available AI tool (antigravity, claude, or cursor-agent) and returns the command."""
+    if shutil.which("agy"):
+        return "agy -p"
     elif shutil.which("claude") and False:
-        return 'claude -p'
+        return "claude -p"
     elif shutil.which("cursor-agent"):
         return "cursor-agent -p"
     else:
-        click.secho("Error: Could not find 'gemini' or 'claude' executable in PATH.", fg="red", err=True)
+        click.secho("Error: Could not find 'agy', 'claude', or 'cursor-agent' executable in PATH.", fg="red", err=True)
         sys.exit(1)
 
 def fetch_git_history(repo_root):
@@ -196,7 +196,7 @@ def main(increment_type, auto, no_release_notes):
             # 3. Combine
             full_prompt = f"Previous Version: {latest_tag}\nNew Version: {new_version}\n\n{prompt_template}\n\n{raw_history}"
 
-            # 4. Run AI (Gemini/Claude)
+            # 4. Run AI (Antigravity/Claude/Cursor)
             ai_cmd = get_ai_tool()
             click.secho(f"Asking {ai_cmd.split()[0]} to summarize...", fg="cyan")
 
