@@ -32,15 +32,37 @@ def run_command(command, check=True, capture_output=False, text=True, cwd=None):
         sys.exit(1)
 
 def get_ai_tool():
-    """Determines the available AI tool (antigravity, claude, or cursor-agent) and returns the command."""
-    if shutil.which("agy"):
-        return "agy -p"
+    """Determines the available AI tool and returns its executable name."""
+    if shutil.which("grok"):
+        return "grok"
+    elif shutil.which("agy"):
+        return "agy"
     elif shutil.which("claude") and False:
-        return "claude -p"
+        return "claude"
     elif shutil.which("cursor-agent"):
-        return "cursor-agent -p"
+        return "cursor-agent"
     else:
-        click.secho("Error: Could not find 'agy', 'claude', or 'cursor-agent' executable in PATH.", fg="red", err=True)
+        click.secho("Error: Could not find 'grok', 'agy', 'claude', or 'cursor-agent' executable in PATH.", fg="red", err=True)
+        sys.exit(1)
+
+def run_ai_prompt(ai_tool, prompt_path, cwd=None):
+    """Runs an AI tool with the given prompt file."""
+    prompt = Path(prompt_path).read_text()
+    click.secho(f"+ {ai_tool} -p <prompt>", dim=True, err=True)
+    try:
+        return subprocess.run(
+            [ai_tool, "-p", prompt],
+            check=True,
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+        )
+    except subprocess.CalledProcessError as e:
+        click.secho(f"Error running command: {ai_tool} -p <prompt>", fg="red", err=True)
+        if e.stdout:
+            click.secho(f"STDOUT: {e.stdout}", fg="red", err=True)
+        if e.stderr:
+            click.secho(f"STDERR: {e.stderr}", fg="red", err=True)
         sys.exit(1)
 
 def fetch_git_history(repo_root):
@@ -115,24 +137,18 @@ def main(increment_type, auto, no_release_notes):
             # Fetch history for analysis
             raw_history = fetch_git_history(repo_root)
             
-            ai_cmd = get_ai_tool()
-            click.secho(f"Using '{ai_cmd.split()[0]}' for analysis...", fg="cyan")
+            ai_tool = get_ai_tool()
+            click.secho(f"Using '{ai_tool}' for analysis...", fg="cyan")
 
             # Construct prompt for bump detection
             bump_prompt = f"{raw_history}\n\nAnalyze the git log above. What is the recommended semantic version bump? Respond with only one word: 'major', 'minor', or 'patch'."
             
-            # Pipe prompt to AI command
-            auto_command = f'{ai_cmd} "Analyze the git log from stdin. What is the recommended semantic version bump? Respond with only one word: \'major\', \'minor\', or \'patch\'"'
-            
-            # We need to pipe the history into the command. 
-            # run_command helper doesn't support input pipe easily with current sig, so we use subprocess directly or write to temp file.
-            # Writing to temp file is safer for large inputs.
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".txt", prefix="railpack-bump-prompt-") as bump_prompt_file:
                 bump_prompt_file.write(bump_prompt)
                 bump_prompt_path = bump_prompt_file.name
             
             try:
-                result = run_command(f"cat '{bump_prompt_path}' | {ai_cmd}", capture_output=True, cwd=repo_root)
+                result = run_ai_prompt(ai_tool, bump_prompt_path, cwd=repo_root)
                 recommended_bump = result.stdout.strip().lower()
             finally:
                  if os.path.exists(bump_prompt_path):
@@ -196,19 +212,16 @@ def main(increment_type, auto, no_release_notes):
             # 3. Combine
             full_prompt = f"Previous Version: {latest_tag}\nNew Version: {new_version}\n\n{prompt_template}\n\n{raw_history}"
 
-            # 4. Run AI (Antigravity/Claude/Cursor)
-            ai_cmd = get_ai_tool()
-            click.secho(f"Asking {ai_cmd.split()[0]} to summarize...", fg="cyan")
+            # 4. Run AI (Grok/Antigravity/Claude/Cursor)
+            ai_tool = get_ai_tool()
+            click.secho(f"Asking {ai_tool} to summarize...", fg="cyan")
 
-            # Write prompt to temp file
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".txt", prefix="railpack-release-prompt-") as prompt_file:
                 prompt_file.write(full_prompt)
                 prompt_file_path = prompt_file.name
 
             try:
-                # Pipe prompt file content to AI command
-                gen_cmd = f"cat '{prompt_file_path}' | {ai_cmd}"
-                summary_result = run_command(gen_cmd, capture_output=True)
+                summary_result = run_ai_prompt(ai_tool, prompt_file_path)
                 summary = summary_result.stdout.strip()
                 
                 # Remove markdown code block wrapping if present
