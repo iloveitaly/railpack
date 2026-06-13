@@ -142,17 +142,19 @@ def main(increment_type, auto, no_release_notes):
 
             # Construct prompt for bump detection
             bump_prompt = f"{raw_history}\n\nAnalyze the git log above. What is the recommended semantic version bump? Respond with only one word: 'major', 'minor', or 'patch'."
-            
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".txt", prefix="railpack-bump-prompt-") as bump_prompt_file:
-                bump_prompt_file.write(bump_prompt)
-                bump_prompt_path = bump_prompt_file.name
-            
-            try:
-                result = run_ai_prompt(ai_tool, bump_prompt_path, cwd=repo_root)
-                recommended_bump = result.stdout.strip().lower()
-            finally:
-                 if os.path.exists(bump_prompt_path):
-                    os.unlink(bump_prompt_path)
+
+            # Generate a unique prompt file in local tmp/ using mktemp (the tmpfile shell tool)
+            # instead of hardcoding a name. This lets users debug exactly what was sent to the AI
+            # by referencing the printed path (per project rules we keep it under ./tmp/).
+            tmp_dir = Path(repo_root) / "tmp"
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+            mktemp_result = run_command("mktemp tmp/bump-prompt.XXXXXX", capture_output=True, cwd=repo_root)
+            bump_prompt_path = Path(mktemp_result.stdout.strip())
+            bump_prompt_path.write_text(bump_prompt)
+            click.secho(f"+ prompt: {bump_prompt_path.relative_to(repo_root)}", dim=True, err=True)
+
+            result = run_ai_prompt(ai_tool, str(bump_prompt_path), cwd=repo_root)
+            recommended_bump = result.stdout.strip().lower()
 
             # Cleanup response (sometimes AI adds extra text/punctuation)
             match = re.search(r'\b(major|minor|patch)\b', recommended_bump)
@@ -216,21 +218,23 @@ def main(increment_type, auto, no_release_notes):
             ai_tool = get_ai_tool()
             click.secho(f"Asking {ai_tool} to summarize...", fg="cyan")
 
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".txt", prefix="railpack-release-prompt-") as prompt_file:
-                prompt_file.write(full_prompt)
-                prompt_file_path = prompt_file.name
+            # Generate a unique prompt file in local tmp/ using mktemp (the tmpfile shell tool)
+            # instead of hardcoding a name. This lets users debug exactly what was sent to the AI
+            # by referencing the printed path (per project rules we keep it under ./tmp/).
+            tmp_dir = Path(repo_root) / "tmp"
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+            mktemp_result = run_command("mktemp tmp/release-prompt.XXXXXX", capture_output=True, cwd=repo_root)
+            prompt_file_path = Path(mktemp_result.stdout.strip())
+            prompt_file_path.write_text(full_prompt)
+            click.secho(f"+ prompt: {prompt_file_path.relative_to(repo_root)}", dim=True, err=True)
 
-            try:
-                summary_result = run_ai_prompt(ai_tool, prompt_file_path)
-                summary = summary_result.stdout.strip()
-                
-                # Remove markdown code block wrapping if present
-                summary = re.sub(r'^```[a-zA-Z]*\n', '', summary)
-                summary = re.sub(r'\n```$', '', summary)
-                summary = summary.strip()
-            finally:
-                if os.path.exists(prompt_file_path):
-                    os.unlink(prompt_file_path)
+            summary_result = run_ai_prompt(ai_tool, str(prompt_file_path))
+            summary = summary_result.stdout.strip()
+
+            # Remove markdown code block wrapping if present
+            summary = re.sub(r'^```[a-zA-Z]*\n', '', summary)
+            summary = re.sub(r'\n```$', '', summary)
+            summary = summary.strip()
 
             # 5. Write summary to temp file for user editing
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".md", prefix="railpack-release-notes-") as summary_file:
