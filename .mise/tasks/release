@@ -143,17 +143,21 @@ def main(increment_type, auto, no_release_notes):
             # Construct prompt for bump detection
             bump_prompt = f"{raw_history}\n\nAnalyze the git log above. What is the recommended semantic version bump? Respond with only one word: 'major', 'minor', or 'patch'."
 
-            # Generate a unique prompt file in local tmp/ using mktemp (the tmpfile shell tool)
-            # instead of hardcoding a name. This lets users debug exactly what was sent to the AI
-            # by referencing the printed path (per project rules we keep it under ./tmp/).
+            # Use tempfile.NamedTemporaryFile (delete=False) in the local ./tmp/ directory.
+            # This is better than shelling out to mktemp, gives a unique safe name (vs hardcoding),
+            # follows the project rule to use local tmp/ instead of global /tmp, and leaves the file
+            # so the gray reference can be used to debug the exact prompt sent to the AI.
             tmp_dir = Path(repo_root) / "tmp"
             tmp_dir.mkdir(parents=True, exist_ok=True)
-            mktemp_result = run_command("mktemp tmp/bump-prompt.XXXXXX", capture_output=True, cwd=repo_root)
-            bump_prompt_path = Path(mktemp_result.stdout.strip())
-            bump_prompt_path.write_text(bump_prompt)
-            click.secho(f"+ prompt: {bump_prompt_path.relative_to(repo_root)}", dim=True, err=True)
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, dir=tmp_dir, prefix="railpack-bump-prompt-", suffix=".txt"
+            ) as f:
+                f.write(bump_prompt)
+                bump_prompt_path = f.name
 
-            result = run_ai_prompt(ai_tool, str(bump_prompt_path), cwd=repo_root)
+            click.secho(f"+ prompt: {Path(bump_prompt_path).relative_to(repo_root)}", dim=True, err=True)
+
+            result = run_ai_prompt(ai_tool, bump_prompt_path, cwd=repo_root)
             recommended_bump = result.stdout.strip().lower()
 
             # Cleanup response (sometimes AI adds extra text/punctuation)
@@ -218,17 +222,21 @@ def main(increment_type, auto, no_release_notes):
             ai_tool = get_ai_tool()
             click.secho(f"Asking {ai_tool} to summarize...", fg="cyan")
 
-            # Generate a unique prompt file in local tmp/ using mktemp (the tmpfile shell tool)
-            # instead of hardcoding a name. This lets users debug exactly what was sent to the AI
-            # by referencing the printed path (per project rules we keep it under ./tmp/).
+            # Use tempfile.NamedTemporaryFile (delete=False) in the local ./tmp/ directory.
+            # This is better than shelling out to mktemp, gives a unique safe name (vs hardcoding),
+            # follows the project rule to use local tmp/ instead of global /tmp, and leaves the file
+            # so the gray reference can be used to debug the exact prompt sent to the AI.
             tmp_dir = Path(repo_root) / "tmp"
             tmp_dir.mkdir(parents=True, exist_ok=True)
-            mktemp_result = run_command("mktemp tmp/release-prompt.XXXXXX", capture_output=True, cwd=repo_root)
-            prompt_file_path = Path(mktemp_result.stdout.strip())
-            prompt_file_path.write_text(full_prompt)
-            click.secho(f"+ prompt: {prompt_file_path.relative_to(repo_root)}", dim=True, err=True)
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, dir=tmp_dir, prefix="railpack-release-prompt-", suffix=".txt"
+            ) as f:
+                f.write(full_prompt)
+                prompt_file_path = f.name
 
-            summary_result = run_ai_prompt(ai_tool, str(prompt_file_path))
+            click.secho(f"+ prompt: {Path(prompt_file_path).relative_to(repo_root)}", dim=True, err=True)
+
+            summary_result = run_ai_prompt(ai_tool, prompt_file_path)
             summary = summary_result.stdout.strip()
 
             # Remove markdown code block wrapping if present
