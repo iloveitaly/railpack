@@ -169,7 +169,7 @@ def main(increment_type, auto, no_release_notes):
                 sys.exit(1)
             
             click.secho(f"Recommended bump: '{recommended_bump}'", fg="green")
-            if not click.confirm("Do you want to proceed with this recommendation?"):
+            if not click.confirm(click.style("Proceed with this version bump recommendation?", fg="cyan", bold=True)):
                 click.secho("Aborted by user.", fg="yellow")
                 sys.exit(0)
             increment_type = recommended_bump
@@ -254,8 +254,8 @@ def main(increment_type, auto, no_release_notes):
             click.echo(summary)
             click.secho("-" * 40, dim=True)
 
-            # 6. Prompt for edit
-            if click.confirm(f"Do you want to edit these release notes?", default=False):
+            # 6. Confirm or edit release notes
+            if not click.confirm(click.style("Confirm these release notes?", fg="cyan", bold=True), default=True):
                 click.edit(filename=summary_file_path)
                 
                 # Re-read file
@@ -268,7 +268,7 @@ def main(increment_type, auto, no_release_notes):
             msg += " and update the release notes"
         msg += ". Are you sure?"
         
-        if not click.confirm(msg):
+        if not click.confirm(click.style(msg, fg="cyan", bold=True)):
             click.secho("Aborted by user.", fg="yellow")
             sys.exit(0)
 
