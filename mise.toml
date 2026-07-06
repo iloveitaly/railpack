@@ -158,3 +158,16 @@ exec docker run -it --rm "$image" bash
 
 [tasks.image-runtime-build]
 run = "docker build -f images/debian/runtime/Dockerfile -t railpack-runtime:local ."
+
+[tasks.mise-runtime-shell]
+description = "Shell into the railpack-runtime image"
+usage = 'flag "--local" help="Build and use railpack-runtime:local instead of the ghcr image"'
+run = '''
+if [ "${usage_local:-false}" = "true" ]; then
+  mise run image-runtime-build
+  image="railpack-runtime:local"
+else
+  image="ghcr.io/railwayapp/railpack-runtime:mise-$RAILPACK_MISE_VERSION"
+fi
+exec docker run -it --rm "$image" bash
+'''
