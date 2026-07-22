@@ -32,8 +32,10 @@ def run_command(command, check=True, capture_output=False, text=True, cwd=None):
         sys.exit(1)
 
 def get_ai_tool():
-    """Determines the available AI tool and returns its executable name."""
-    if shutil.which("grok"):
+    """Determines the available AI tool, preferring Codex over Grok."""
+    if shutil.which("codex"):
+        return "codex"
+    elif shutil.which("grok"):
         return "grok"
     elif shutil.which("agy"):
         return "agy"
@@ -42,23 +44,32 @@ def get_ai_tool():
     elif shutil.which("cursor-agent"):
         return "cursor-agent"
     else:
-        click.secho("Error: Could not find 'grok', 'agy', 'claude', or 'cursor-agent' executable in PATH.", fg="red", err=True)
+        click.secho("Error: Could not find 'codex', 'grok', 'agy', 'claude', or 'cursor-agent' executable in PATH.", fg="red", err=True)
         sys.exit(1)
 
 def run_ai_prompt(ai_tool, prompt_path, cwd=None):
     """Runs an AI tool with the given prompt file."""
     prompt = Path(prompt_path).read_text()
-    click.secho(f"+ {ai_tool} -p <prompt>", dim=True, err=True)
+    if ai_tool == "codex":
+        # Codex reads the prompt from stdin in exec mode. Read-only prevents an
+        # otherwise unnecessary agent edit while generating release metadata.
+        command = ["codex", "exec", "--sandbox", "read-only", "-"]
+    else:
+        # Grok and the legacy fallback tools use -p for a prompt argument.
+        command = [ai_tool, "-p", prompt]
+
+    click.secho(f"+ {' '.join(command[:-1])} <prompt>", dim=True, err=True)
     try:
         return subprocess.run(
-            [ai_tool, "-p", prompt],
+            command,
             check=True,
             capture_output=True,
             text=True,
             cwd=cwd,
+            input=prompt if ai_tool == "codex" else None,
         )
     except subprocess.CalledProcessError as e:
-        click.secho(f"Error running command: {ai_tool} -p <prompt>", fg="red", err=True)
+        click.secho(f"Error running command: {' '.join(command[:-1])} <prompt>", fg="red", err=True)
         if e.stdout:
             click.secho(f"STDOUT: {e.stdout}", fg="red", err=True)
         if e.stderr:
@@ -218,7 +229,7 @@ def main(increment_type, auto, no_release_notes):
             # 3. Combine
             full_prompt = f"Previous Version: {latest_tag}\nNew Version: {new_version}\n\n{prompt_template}\n\n{raw_history}"
 
-            # 4. Run AI (Grok/Antigravity/Claude/Cursor)
+            # 4. Run AI (Codex preferred; Grok and legacy tools supported)
             ai_tool = get_ai_tool()
             click.secho(f"Asking {ai_tool} to summarize...", fg="cyan")
 
