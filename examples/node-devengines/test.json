@@ -1,0 +1,7 @@
+[
+  {
+    // The runtime must reuse the Node installation included in the image.
+    "expectedOutput": "Node.js installation count: 1",
+    "stderrAllowed": true
+  }
+]
