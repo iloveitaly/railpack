@@ -240,7 +240,7 @@ Each step in the build process can have:
 | `assets`       | Mapping of name to file contents referenced in file commands            |
 | `variables`    | Mapping of name to variable values referenced in variable commands      |
 | `caches`       | List of cache IDs available to all commands in this step                |
-| `deployOutputs`| List of filters that specify which parts of this step should be included in the final image |
+| `deployOutputs` | Generated filters for the final image                         |
 
 ## Commands
 
@@ -325,8 +325,48 @@ The deploy section configures how the container runs:
 | `startCommand` | The command to run when the container starts                            |
 | `variables`    | Environment variables available to the start command                    |
 | `paths`        | Paths to prepend to the $PATH environment variable                      |
-| `inputs`       | List of layers for the deploy step (from steps, images, or local files) |
+| `inputs`       | Final image layers                                             |
 | `aptPackages`  | List of Apt packages to install in the final image                      |
+
+### Deploy Inputs and Step Outputs
+
+Railpack generates deploy inputs from providers and configured steps. A step's
+`deployOutputs` controls which parts of that step are included in these
+generated inputs:
+
+- Omit `deployOutputs` to include the step's working directory.
+- Set `deployOutputs` to `[]` to include nothing from the step.
+- Provide filters to include specific files or directories.
+
+When `deploy.inputs` is provided, it replaces every generated input, including
+all step `deployOutputs`:
+
+```json
+{
+  "steps": {
+    "build": {
+      "deployOutputs": [{ "include": ["dist"] }]
+    }
+  },
+  "deploy": {
+    // Only "other" is deployed; the generated "dist" output is replaced.
+    "inputs": [{ "step": "build", "include": ["other"] }]
+  }
+}
+```
+
+Add `...` to retain generated inputs at that position:
+
+```json
+"deploy": {
+  "inputs": [
+    "...",
+    { "local": true, "include": ["config.json"] }
+  ]
+}
+```
+
+An explicit empty list, `deploy.inputs: []`, deploys no generated inputs.
 
 ### Locale
 

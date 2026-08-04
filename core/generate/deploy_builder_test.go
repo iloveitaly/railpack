@@ -32,6 +32,24 @@ func TestHasIncludeForStep(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "unfiltered input covers any path",
+			inputs: []plan.Layer{
+				{Step: "build"},
+			},
+			stepName: "build",
+			path:     "/app/dist",
+			expected: true,
+		},
+		{
+			name: "input with exclusions is not treated as unfiltered",
+			inputs: []plan.Layer{
+				{Step: "build", Filter: plan.Filter{Exclude: []string{"dist"}}},
+			},
+			stepName: "build",
+			path:     "dist",
+			expected: false,
+		},
+		{
 			name: "dot covers any path",
 			inputs: []plan.Layer{
 				{Step: "build", Filter: plan.Filter{Include: []string{"."}}},

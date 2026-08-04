@@ -6,8 +6,7 @@
       "commands": ["...", { "path": "/usr/games" }, "cowsay hello"]
     },
     "custom": {
-      "commands": ["echo 'world' > /hello"],
-      "deployOutputs": [{ "include": ["/hello"] }]
+      "commands": ["echo 'world' > /hello"]
     },
     "playwright": {
       "commands": ["echo 'boop' > /boop"]
@@ -16,7 +15,8 @@
   "deploy": {
     "inputs": [
       { "image": "macabees/neofetch", "include": ["/usr/bin/neofetch"] },
-      { "local": true, "include": ["custom-start.sh"] }
+      { "local": true, "include": ["custom-start.sh"] },
+      { "step": "custom", "include": ["/hello"] }
     ],
     "aptPackages": ["cowsay"],
     // Debian installs cowsay in /usr/games, which is not on the runtime PATH.

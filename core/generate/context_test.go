@@ -266,7 +266,7 @@ func TestGenerateContextDeployInputs(t *testing.T) {
 		}, buildPlan.Deploy.Inputs)
 	})
 
-	t.Run("explicit deploy outputs remain additive", func(t *testing.T) {
+	t.Run("replacement inputs override explicit deploy outputs", func(t *testing.T) {
 		ctx := CreateTestContext(t, "../../examples/node-npm")
 		configJSON := `{
 			"steps": {
@@ -293,11 +293,71 @@ func TestGenerateContextDeployInputs(t *testing.T) {
 
 		require.Equal(t, []plan.Layer{
 			plan.NewStepLayer("build", plan.NewIncludeFilter([]string{"other"})),
+		}, buildPlan.Deploy.Inputs)
+	})
+
+	t.Run("replacement inputs override explicit outputs from every step", func(t *testing.T) {
+		ctx := CreateTestContext(t, "../../examples/node-npm")
+		configJSON := `{
+			"steps": {
+				"assets": {
+					"commands": ["echo assets"],
+					"deployOutputs": [
+						{"include": ["public"]}
+					]
+				},
+				"build": {
+					"commands": ["echo building"],
+					"deployOutputs": [
+						{"include": ["dist"]}
+					]
+				}
+			},
+			"deploy": {
+				"inputs": [
+					{"step": "build", "include": ["other"]}
+				]
+			}
+		}`
+
+		var config config.Config
+		require.NoError(t, json.Unmarshal([]byte(configJSON), &config))
+		ctx.Config = &config
+
+		buildPlan, _, err := ctx.Generate()
+		require.NoError(t, err)
+
+		require.Equal(t, []plan.Layer{
+			plan.NewStepLayer("build", plan.NewIncludeFilter([]string{"other"})),
+		}, buildPlan.Deploy.Inputs)
+	})
+
+	t.Run("omitted inputs retain explicit deploy outputs", func(t *testing.T) {
+		ctx := CreateTestContext(t, "../../examples/node-npm")
+		configJSON := `{
+			"steps": {
+				"build": {
+					"commands": ["echo building"],
+					"deployOutputs": [
+						{"include": ["dist"]}
+					]
+				}
+			}
+		}`
+
+		var config config.Config
+		require.NoError(t, json.Unmarshal([]byte(configJSON), &config))
+		ctx.Config = &config
+
+		buildPlan, _, err := ctx.Generate()
+		require.NoError(t, err)
+
+		require.Equal(t, []plan.Layer{
 			plan.NewStepLayer("build", plan.NewIncludeFilter([]string{"dist"})),
 		}, buildPlan.Deploy.Inputs)
 	})
 
-	t.Run("empty inputs suppress implicit outputs", func(t *testing.T) {
+	t.Run("empty inputs suppress all generated outputs", func(t *testing.T) {
 		ctx := CreateTestContext(t, "../../examples/node-npm")
 		provider := &TestProvider{}
 		require.NoError(t, provider.Plan(ctx))
@@ -308,11 +368,35 @@ func TestGenerateContextDeployInputs(t *testing.T) {
 					"commands": ["echo installing"]
 				},
 				"build": {
-					"commands": ["echo building"]
+					"commands": ["echo building"],
+					"deployOutputs": [
+						{"include": ["dist"]}
+					]
 				}
 			},
 			"deploy": {
 				"inputs": []
+			}
+		}`
+
+		var config config.Config
+		require.NoError(t, json.Unmarshal([]byte(configJSON), &config))
+		ctx.Config = &config
+
+		buildPlan, _, err := ctx.Generate()
+		require.NoError(t, err)
+
+		require.Empty(t, buildPlan.Deploy.Inputs)
+	})
+
+	t.Run("empty deploy outputs suppress the step output", func(t *testing.T) {
+		ctx := CreateTestContext(t, "../../examples/node-npm")
+		configJSON := `{
+			"steps": {
+				"custom": {
+					"commands": ["echo custom"],
+					"deployOutputs": []
+				}
 			}
 		}`
 
@@ -352,6 +436,40 @@ func TestGenerateContextDeployInputs(t *testing.T) {
 		require.Equal(t, []plan.Layer{
 			plan.NewStepLayer("build"),
 			plan.NewStepLayer("custom", plan.NewIncludeFilter([]string{"."})),
+		}, buildPlan.Deploy.Inputs)
+	})
+
+	t.Run("spread inputs retain explicit deploy outputs at the spread position", func(t *testing.T) {
+		ctx := CreateTestContext(t, "../../examples/node-npm")
+		configJSON := `{
+			"steps": {
+				"build": {
+					"commands": ["echo building"],
+					"deployOutputs": [
+						{"include": ["dist"]}
+					]
+				}
+			},
+			"deploy": {
+				"inputs": [
+					{"image": "alpine", "include": ["/before"]},
+					"...",
+					{"image": "debian", "include": ["/after"]}
+				]
+			}
+		}`
+
+		var config config.Config
+		require.NoError(t, json.Unmarshal([]byte(configJSON), &config))
+		ctx.Config = &config
+
+		buildPlan, _, err := ctx.Generate()
+		require.NoError(t, err)
+
+		require.Equal(t, []plan.Layer{
+			plan.NewImageLayer("alpine", plan.NewIncludeFilter([]string{"/before"})),
+			plan.NewStepLayer("build", plan.NewIncludeFilter([]string{"dist"})),
+			plan.NewImageLayer("debian", plan.NewIncludeFilter([]string{"/after"})),
 		}, buildPlan.Deploy.Inputs)
 	})
 }

@@ -215,8 +215,12 @@ func (c *GenerateContext) applyConfig() {
 	maps.Copy(c.Caches.Caches, c.Config.Caches)
 	c.Secrets = plan.SpreadStrings(c.Config.Secrets, c.Secrets)
 
+	var configuredDeployInputs []plan.Layer
+
 	// Update deploy from config
 	if c.Config.Deploy != nil {
+		configuredDeployInputs = c.Config.Deploy.Inputs
+
 		if c.Config.Deploy.Base != nil && !c.Config.Deploy.Base.IsEmpty() {
 			c.Deploy.Base = *c.Config.Deploy.Base
 		}
@@ -226,15 +230,9 @@ func (c *GenerateContext) applyConfig() {
 		}
 
 		c.applyDeployAptPackages()
-		c.Deploy.DeployInputs = plan.Spread(c.Config.Deploy.Inputs, c.Deploy.DeployInputs)
 		c.Deploy.Paths = plan.SpreadStrings(c.Config.Deploy.Paths, c.Deploy.Paths)
 		maps.Copy(c.Deploy.Variables, c.Config.Deploy.Variables)
 	}
-
-	// A spread retains generated deploy composition; any explicit list without one takes full control.
-	replacesGeneratedDeployInputs := c.Config.Deploy != nil &&
-		c.Config.Deploy.Inputs != nil &&
-		!slices.ContainsFunc(c.Config.Deploy.Inputs, plan.Layer.IsSpread)
 
 	// Apply step config to the context
 	for _, name := range slices.Sorted(maps.Keys(c.Config.Steps)) {
@@ -268,11 +266,8 @@ func (c *GenerateContext) applyConfig() {
 		// (e.g. provider already added "." so we don't duplicate it from --build-cmd).
 		outputFilters := []plan.Filter{plan.NewIncludeFilter([]string{"."})}
 		if configStep.DeployOutputs != nil {
-			// if deploy outputs are explicitly set on a step, then always use them, regardless of deploy configuration
-			// TODO I don't like this and find it confusing: deploy.inputs should be able to override step-level deploy outputs
 			outputFilters = configStep.DeployOutputs
-		} else if replacesGeneratedDeployInputs || c.Deploy.HasInputForStep(name) {
-			// if no deployOutput is specified on a step, the user has not specified a "..." in deploy.inputs, and
+		} else if c.Deploy.HasInputForStep(name) {
 			continue
 		}
 		for _, filter := range outputFilters {
@@ -284,6 +279,9 @@ func (c *GenerateContext) applyConfig() {
 			c.Deploy.AddInputs([]plan.Layer{plan.NewStepLayer(name, filter)})
 		}
 	}
+
+	// Apply configured inputs last so replacement lists control the complete deploy composition.
+	c.Deploy.DeployInputs = plan.Spread(configuredDeployInputs, c.Deploy.DeployInputs)
 }
 
 func (c *GenerateContext) applyBuildAptPackages() {

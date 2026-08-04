@@ -15,7 +15,7 @@ const (
 type DeployConfig struct {
 	AptPackages []string          `json:"aptPackages,omitempty" jsonschema:"description=List of apt packages to include at runtime"`
 	Base        *plan.Layer       `json:"base,omitempty" jsonschema:"description=The base image to use for the deploy step"`
-	Inputs      []plan.Layer      `json:"inputs,omitempty" jsonschema:"description=The inputs for the deploy step"`
+	Inputs      []plan.Layer      `json:"inputs,omitempty" jsonschema:"description=Inputs for the final image. Replaces generated inputs unless the list contains ..."`
 	StartCmd    string            `json:"startCommand,omitempty" jsonschema:"description=The command to run in the container"`
 	Variables   map[string]string `json:"variables,omitempty" jsonschema:"description=The variables available to this step. The key is the name of the variable that is referenced in a variable command"`
 	Paths       []string          `json:"paths,omitempty" jsonschema:"description=The paths to prepend to the $PATH environment variable"`
@@ -23,7 +23,7 @@ type DeployConfig struct {
 
 type StepConfig struct {
 	plan.Step
-	DeployOutputs []plan.Filter `json:"deployOutputs,omitempty" jsonschema:"description=Parts of this step that should be included in the final image. If empty, the /app directory will be used."`
+	DeployOutputs []plan.Filter `json:"deployOutputs,omitempty" jsonschema:"description=Generated parts of this step to include in the final image. Omit to include /app; an explicit empty list includes nothing. Replaced by deploy.inputs unless it contains ..."`
 }
 
 type Config struct {

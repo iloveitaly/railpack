@@ -37,6 +37,9 @@ func (b *DeployBuilder) HasIncludeForStep(stepName string, path string) bool {
 		if layer.Step != stepName {
 			continue
 		}
+		if len(layer.Include) == 0 && len(layer.Exclude) == 0 {
+			return true
+		}
 		for _, inc := range layer.Include {
 			// exact match, or existing include is "." which covers everything
 			if inc == path || inc == "." {
@@ -47,7 +50,7 @@ func (b *DeployBuilder) HasIncludeForStep(stepName string, path string) bool {
 	return false
 }
 
-// checks if any of the deploy inputs contain a given step name
+// Detects any deploy layer for a step so implicit defaults do not duplicate or broaden it.
 func (b *DeployBuilder) HasInputForStep(stepName string) bool {
 	for _, layer := range b.DeployInputs {
 		if layer.Step == stepName {
