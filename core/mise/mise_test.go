@@ -1,13 +1,35 @@
 package mise
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/railwayapp/railpack/core/app"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMiseGetCurrentListReadsNpmFromPackageJSON(t *testing.T) {
+	testApp, err := app.NewApp("testdata/npm-dev-engines")
+	require.NoError(t, err)
+
+	miseInstance, err := New(t.TempDir())
+	require.NoError(t, err)
+
+	output, err := miseInstance.GetCurrentList(testApp.Source)
+	require.NoError(t, err)
+
+	var tools map[string][]struct {
+		Version          string `json:"version"`
+		RequestedVersion string `json:"requested_version"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(output), &tools))
+	require.Len(t, tools["npm"], 1)
+	require.Equal(t, "11.2.0", tools["npm"][0].Version)
+	require.Equal(t, "11.2.0", tools["npm"][0].RequestedVersion)
+}
 
 func TestMistGetLatestVersion(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "mise-test")

@@ -27,7 +27,7 @@ Railpack sets the following mise settings by default in the generated
 |---------|-------|--------|
 | `paranoid` | `true` | Enforces HTTPS and stricter security validation |
 | `trusted_config_paths` | `["/app"]` | Trusts app config files to avoid warnings during build |
-| `idiomatic_version_file_enable_tools` | *(language list)* | Auto-reads version files like `.node-version`, `.python-version`, etc. |
+| `idiomatic_version_file_enable_tools` | *(tool list)* | Auto-reads version files like `.node-version`, `.python-version`, and `package.json`. |
 | `minimum_release_age` | `"14d"` | Mise will omit language, package manager, etc versions released in the last two weeks. You can override this settings in your application's mise configuration. |
 | `node.verify` | `false` | Skips asset signature verification for Node, since recently released versions may not yet have a public key |
 
@@ -48,9 +48,17 @@ into the build. This includes:
   `.config/mise/conf.d/*.toml`
 - **Idiomatic version files**: `.ruby-version`, `.python-version`,
   `.python-versions`, `.node-version`, `.nvmrc`, `.go-version`,
-  `.java-version`, `.sdkmanrc`, `.bun-version`, `.yvmrc`
+  `.java-version`, `.sdkmanrc`, `.bun-version`, `.yvmrc`, `package.json`
 - **Lock files**: `mise.lock` files co-located with any detected
   `*.toml` config
+
+For the `npm` tool, Mise's idiomatic version
+[parser](https://mise.jdx.dev/configuration.html#idiomatic-version-files)
+first reads `devEngines.packageManager` when its `name` is `npm`. The field may
+be an object or an array; only the first array item is considered. Mise
+otherwise falls back to a top-level `packageManager` value such as
+`npm@10.9.6`, stripping any `+sha...` suffix from the version. The
+`engines.npm` field is not used for idiomatic npm version detection.
 
 ### Example: Precompiled Ruby
 
