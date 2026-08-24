@@ -82,7 +82,7 @@
    ],
    "inputs": [
     {
-     "image": "ghcr.io/railwayapp/railpack-builder:mise-2026.8.11"
+     "image": "ghcr.io/railwayapp/railpack-builder:mise-2026.8.6"
     }
    ],
    "name": "packages:mise",
@@ -110,17 +110,13 @@
      "src": "package.json"
     },
     {
-     "dest": "pnpm-lock.yaml",
-     "src": "pnpm-lock.yaml"
-    },
-    {
      "path": "/opt/pnpm"
     },
     {
      "cmd": "pnpm add -g node-gyp"
     },
     {
-     "cmd": "pnpm install --frozen-lockfile --prefer-offline"
+     "cmd": "pnpm install"
     }
    ],
    "inputs": [
@@ -143,11 +139,6 @@
   {
    "caches": [
     "node-modules"
-   ],
-   "commands": [
-    {
-     "cmd": "pnpm run build"
-    }
    ],
    "inputs": [
     {
@@ -178,7 +169,7 @@
    ],
    "inputs": [
     {
-     "image": "ghcr.io/railwayapp/railpack-runtime:mise-2026.8.11"
+     "image": "ghcr.io/railwayapp/railpack-runtime:mise-2026.8.6"
     }
    ],
    "name": "packages:apt:runtime"
