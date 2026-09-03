@@ -59,3 +59,16 @@ func (p *NodeProvider) getTanstackStartCommand(ctx *generate.GenerateContext) st
 
 	return p.packageManager.ExecCommand(DefaultTanstackSrvxStartCommand)
 }
+
+// True when @tanstack/react-start is only in devDependencies. Detection requires a
+// production dependency, so these apps silently deploy as static Vite sites with
+// SSR and server routes broken.
+func (p *NodeProvider) hasMisplacedTanstackStart() bool {
+	pkg := p.workspace.Root
+	if pkg == nil || pkg.PackageJson == nil {
+		return false
+	}
+
+	return !pkg.PackageJson.hasProductionDependency("@tanstack/react-start") &&
+		pkg.PackageJson.hasDevDependency("@tanstack/react-start")
+}
