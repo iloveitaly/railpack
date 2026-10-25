@@ -124,6 +124,7 @@ step are not included:
   "secrets": ["DATABASE_URL", "API_KEY", "STRIPE_LIVE_KEY"],
   "steps": {
     "build": {
+      // any secret change invalidates this step's cache
       "secrets": ["*"]
     }
   }
