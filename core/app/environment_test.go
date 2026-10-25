@@ -8,6 +8,8 @@ import (
 
 func TestParseKeyValueStrings(t *testing.T) {
 	t.Setenv("FROM_ENV", "resolved")
+	// An explicit empty value must override a nonempty process variable.
+	t.Setenv("EMPTY", "this must not be inherited")
 
 	variables, err := ParseKeyValueStrings([]string{
 		"VAR1=value1",
@@ -20,6 +22,17 @@ func TestParseKeyValueStrings(t *testing.T) {
 		"FROM_ENV",
 		"EMPTY=",
 		"MISSING",
+		"LEADING_EQUALS==value",
+		"EQUALS=value=with=equals==",
+		"WHITESPACE=  leading and trailing  ",
+		`QUOTES='single' and "double"`,
+		`ESCAPES=\n\t\\`,
+		"MULTILINE=line 1\nline 2\nline 3",
+		`JSON={"key":"value","nested":{"enabled":true}}`,
+		"SHELL=$HOME ${USER:-default} # literal comment",
+		"UNICODE=héllo 世界 🌍",
+		"DUPLICATE=first",
+		"DUPLICATE=second",
 	})
 	env := NewEnvironment(&variables)
 
@@ -35,6 +48,17 @@ func TestParseKeyValueStrings(t *testing.T) {
 	require.Contains(t, env.Variables, "EMPTY")
 	require.Empty(t, env.GetVariable("EMPTY"))
 	require.NotContains(t, env.Variables, "MISSING")
+	// Values are literal CLI arguments; only the first equals sign separates the name.
+	require.Equal(t, "=value", env.GetVariable("LEADING_EQUALS"))
+	require.Equal(t, "value=with=equals==", env.GetVariable("EQUALS"))
+	require.Equal(t, "  leading and trailing  ", env.GetVariable("WHITESPACE"))
+	require.Equal(t, `'single' and "double"`, env.GetVariable("QUOTES"))
+	require.Equal(t, `\n\t\\`, env.GetVariable("ESCAPES"))
+	require.Equal(t, "line 1\nline 2\nline 3", env.GetVariable("MULTILINE"))
+	require.Equal(t, `{"key":"value","nested":{"enabled":true}}`, env.GetVariable("JSON"))
+	require.Equal(t, "$HOME ${USER:-default} # literal comment", env.GetVariable("SHELL"))
+	require.Equal(t, "héllo 世界 🌍", env.GetVariable("UNICODE"))
+	require.Equal(t, "second", env.GetVariable("DUPLICATE"))
 }
 
 func TestEnvironmentVariables(t *testing.T) {
