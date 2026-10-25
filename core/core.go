@@ -73,6 +73,9 @@ func readConfigJSON(path string, v any) error {
 func GenerateBuildPlan(app *app.App, env *app.Environment, options *GenerateBuildPlanOptions) (*BuildResult, error) {
 	logger := logger.NewLogger()
 
+	// Make --env values available when reading configuration and detecting providers
+	env = env.WithVariables(options.Vars)
+
 	config, err := GetConfig(app, env, options, logger)
 	if err != nil {
 		return failedBuildResult(logger, err)
@@ -90,7 +93,7 @@ func GenerateBuildPlan(app *app.App, env *app.Environment, options *GenerateBuil
 		}
 	}
 
-	// Set user variables to be available in all steps
+	// options.Vars contains CLI --env values, which apply to every build step
 	if options.Vars != nil {
 		maps.Copy(ctx.UserVariables, options.Vars)
 	}
@@ -314,8 +317,8 @@ func GenerateConfigFromEnvironment(env *app.Environment) *c.Config {
 		config.Deploy.AptPackages = aptPackages
 	}
 
-	// TODO why do we add all the environment variables to the secrets?
-	config.Secrets = append(config.Secrets, slices.Sorted(maps.Keys(env.Variables))...)
+	// Only --secret values contribute secret names; --env values remain ordinary environment variables
+	config.Secrets = append(config.Secrets, slices.Sorted(maps.Keys(env.Secrets))...)
 
 	return config
 }
@@ -340,7 +343,7 @@ func GenerateConfigFromOptions(options *GenerateBuildPlanOptions) *c.Config {
 		config.Deploy.StartCmd = options.StartCommand
 	}
 
-	// User-provided variables take precedence over generated deployment variables.
+	// CLI --env values override railpack.json deploy.variables when the configurations are merged
 	maps.Copy(config.Deploy.Variables, options.Vars)
 
 	return config

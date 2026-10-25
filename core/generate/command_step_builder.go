@@ -121,7 +121,7 @@ func (b *CommandStepBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions)
 	step.Variables = b.Variables
 	step.Secrets = b.Secrets
 
-	// Add user variables to this step
+	// CLI --env values override provider defaults and railpack.json step variables
 	maps.Copy(step.Variables, options.UserVariables)
 
 	p.Steps = append(p.Steps, *step)

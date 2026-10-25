@@ -71,6 +71,10 @@ TZ=America/Los_Angeles railpack build \
   --env LANG=en_US.UTF-8
 ```
 
+Values passed through `--env` override provider defaults and `railpack.json`
+step and deploy variables with the same name. They are also available when
+reading configuration and detecting providers.
+
 ## Runtime Railpack Variables
 
 The final image includes runtime metadata that is not available to build
