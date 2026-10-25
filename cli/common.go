@@ -39,11 +39,11 @@ func commonPlanFlags() []cli.Flag {
 		&cli.StringSliceFlag{
 			Name:    "env",
 			Aliases: []string{"e"},
-			Usage:   "environment variables to set",
+			Usage:   "environment variable available during build and runtime",
 		},
 		&cli.StringSliceFlag{
 			Name:  "secret",
-			Usage: "secrets to expose (can lookup from environment)",
+			Usage: "sensitive environment variable available at build time",
 		},
 		&cli.StringSliceFlag{
 			Name:  "previous",
@@ -82,15 +82,20 @@ func GenerateBuildResultForCommand(cmd *cli.Command) (*core.BuildResult, *a.App,
 
 	log.Debugf("Building %s", app.Source)
 
+	// Each flag produces a slice of NAME or NAME=VALUE strings, e.g. []string{"TOKEN", "MODE=production"}.
 	envsArgs := cmd.StringSlice("env")
 	secretsArgs := cmd.StringSlice("secret")
 
-	env, err := a.FromEnvs(secretsArgs)
+	// Resolve secret arguments into a map of secret names to their build-time values.
+	secrets, err := a.ParseKeyValueStrings(secretsArgs)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error creating env: %w", err)
 	}
+	// Provide resolved secrets to config generation and build-step secret mounts.
+	env := a.NewEnvironment(&secrets)
 
-	vars, err := a.ParseKeyValueStrings(envsArgs, false)
+	// Resolve env arguments into variables applied to every build step and the runtime image.
+	vars, err := a.ParseKeyValueStrings(envsArgs)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error parsing env vars: %w", err)
 	}
