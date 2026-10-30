@@ -141,6 +141,9 @@ jobs:
       - name: Test plan and local build
         run: mise run test:integration:plan-and-local-build
 
+      - name: Test environment variables and build secrets
+        run: mise run test:integration:env-and-secrets
+
       # The task fixes node-bun so it can verify --previous and --start-cmd at runtime.
       - name: Test prepare and frontend buildctl build
         # Pass GITHUB_TOKEN to BuildKit to prevent GitHub API rate-limiting (HTTP 403) when mise downloads tool packages
