@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "variables": {
+    "MODE": "global",
+    "EMPTY": "",
+    "GLOBAL_VALUE": "from-global",
+    "SCOPED_EMPTY": "global",
+    "RAILPACK_SHELL_SCRIPT": "app.sh"
+  },
+  "steps": {
+    "build": {
+      "commands": [
+        "...",
+        "test \"$MODE\" = step && test \"$EMPTY\" = step && test \"$GLOBAL_VALUE\" = from-global && test \"${SCOPED_EMPTY+x}\" = x && test -z \"$SCOPED_EMPTY\" && test \"$STEP_ONLY\" = build"
+      ],
+      "variables": {
+        "MODE": "step",
+        "EMPTY": "step",
+        "SCOPED_EMPTY": "",
+        "STEP_ONLY": "build"
+      }
+    }
+  },
+  "deploy": {
+    "variables": {
+      "MODE": "deploy",
+      "EMPTY": "deploy",
+      "SCOPED_EMPTY": "",
+      "DEPLOY_ONLY": "runtime"
+    }
+  }
+}

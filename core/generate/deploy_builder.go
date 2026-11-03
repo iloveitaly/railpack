@@ -75,8 +75,8 @@ func (b *DeployBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions) {
 		runtimeAptStep.Caches = options.Caches.GetAptCaches()
 		runtimeAptStep.Secrets = []string{}
 
-		// This step has no generated variables; --env values override inherited runtime-image ENV during the build
-		maps.Copy(runtimeAptStep.Variables, options.UserVariables)
+		// global variables also override ENV inherited from the runtime image during package installation
+		maps.Copy(runtimeAptStep.Variables, options.GlobalVariables)
 
 		p.Steps = append(p.Steps, *runtimeAptStep)
 		baseLayer = plan.NewStepLayer(runtimeAptStep.Name)
@@ -89,6 +89,6 @@ func (b *DeployBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions) {
 	p.Deploy.Variables = b.Variables
 	p.Deploy.Paths = b.Paths
 
-	// CLI --env values override provider runtime defaults (e.g. NODE_ENV, PYTHONUNBUFFERED) and railpack.json deploy.variables
-	maps.Copy(p.Deploy.Variables, options.UserVariables)
+	// global variables override provider runtime defaults; deploy.variables are applied to the finished plan
+	maps.Copy(p.Deploy.Variables, options.GlobalVariables)
 }

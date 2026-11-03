@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Each step passes the secret and variable names that it expects to use.
+# each step passes the secret and variable names that it expects to use
 REQUIRED_SECRETS=("$@")
 
 missing_secrets=()

@@ -121,6 +121,10 @@ func TestExamplesIntegration(t *testing.T) {
 
 				fmt.Printf("\033[32mRunning: examples/%s\033[0m\n", entry.Name())
 
+				if len(testCase.Envs) > 0 {
+					t.Log("Warning: test.json now supports secrets for build-only values. Legacy envs remains supported for planning, build secrets, and runtime variables. See https://railpack.com/guides/developing-locally/#build-secrets")
+				}
+
 				userApp, err := app.NewApp(examplePath)
 				if err != nil {
 					t.Fatalf("failed to create app: %v", err)
@@ -159,10 +163,8 @@ func TestExamplesIntegration(t *testing.T) {
 					strings.ToLower(strings.ReplaceAll(testName, "/", "-")),
 					strings.ToLower(uuid.New().String()))
 
-				// Every env name is added to the generated plan's secret catalog.
-				// Secrets bypass plan generation, but both value sets must be available to BuildKit.
-				buildSecrets := make(map[string]string, len(testCase.Envs)+len(testCase.Secrets))
-				maps.Copy(buildSecrets, testCase.Envs)
+				// envs declare names in the plan's secrets array; Secrets supply additional values directly to BuildKit
+				buildSecrets := maps.Collect(maps.All(testCase.Envs))
 				maps.Copy(buildSecrets, testCase.Secrets)
 
 				if err := buildkit.BuildWithBuildkitClient(examplePath, buildResult.Plan, buildkit.BuildWithBuildkitClientOptions{

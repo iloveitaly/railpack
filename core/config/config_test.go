@@ -312,6 +312,10 @@ func TestGetJsonSchema(t *testing.T) {
 	require.NotEmpty(t, schema)
 
 	require.NotContains(t, schema.Required, "provider")
+	require.NotContains(t, schema.Required, "variables")
+	variablesSchema, ok := schema.Properties.Get("variables")
+	require.True(t, ok)
+	require.Equal(t, "object", variablesSchema.Type)
 	providerSchema, ok := schema.Properties.Get("provider")
 	require.True(t, ok)
 	require.ElementsMatch(t, []any{

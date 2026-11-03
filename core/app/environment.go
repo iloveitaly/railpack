@@ -2,40 +2,63 @@ package app
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"strings"
 )
 
 type Environment struct {
+	// environment variables and secrets used to read configuration and detect providers
 	Variables map[string]string
+	// values supplied as build secrets, kept separate from environment variables
+	Secrets map[string]string
 }
 
-func NewEnvironment(variables *map[string]string) *Environment {
-	if variables == nil {
-		variables = &map[string]string{}
+// seed planning variables and build secrets from the same supplied map
+//
+// {"TOKEN": "abc"} -> Variables={"TOKEN": "abc"}, Secrets={"TOKEN": "abc"}
+func NewEnvironment(buildSecrets *map[string]string) *Environment {
+	if buildSecrets == nil {
+		buildSecrets = &map[string]string{}
 	}
 
-	return &Environment{Variables: *variables}
+	return &Environment{Variables: *buildSecrets, Secrets: *buildSecrets}
 }
 
-// ParseKeyValueStrings parses CLI arguments in NAME or NAME=VALUE form. A
-// name-only entry resolves its value from the current process environment.
-func ParseKeyValueStrings(pairs []string) (map[string]string, error) {
-	vars := make(map[string]string)
+// clone planning variables with overrides while sharing the original build secrets
+//
+// Variables={"MODE": "dev"}, overrides={"MODE": "prod", "EMPTY": ""}
+// -> Variables={"MODE": "prod", "EMPTY": ""}, Secrets unchanged
+func (e *Environment) WithVariables(variableOverrides map[string]string) *Environment {
+	mergedVariables := maps.Collect(maps.All(e.Variables))
+	maps.Copy(mergedVariables, variableOverrides)
+	return &Environment{Variables: mergedVariables, Secrets: e.Secrets}
+}
 
-	for _, pair := range pairs {
-		name, value, hasValue := strings.Cut(pair, "=")
-		if hasValue {
-			vars[name] = value
+// resolve variable flag values, using the process environment for name-only entries
+//
+// - explicit values are literal, including empty strings
+// - missing process lookups are omitted
+// - repeated names use the last resolved value
+//
+// with TOKEN=abc in the process: ["MODE=prod", "TOKEN", "EMPTY="]
+// -> {"MODE": "prod", "TOKEN": "abc", "EMPTY": ""}, nil
+func ParseVariableFlagValues(variableFlagValues []string) (map[string]string, error) {
+	variableValues := make(map[string]string)
+
+	for _, variableFlagValue := range variableFlagValues {
+		variableName, variableValue, hasExplicitValue := strings.Cut(variableFlagValue, "=")
+		if hasExplicitValue {
+			variableValues[variableName] = variableValue
 			continue
 		}
 
-		if value, ok := os.LookupEnv(name); ok {
-			vars[name] = value
+		if processValue, existsInProcess := os.LookupEnv(variableName); existsInProcess {
+			variableValues[variableName] = processValue
 		}
 	}
 
-	return vars, nil
+	return variableValues, nil
 }
 
 // GetVariable returns the value of the given variable name
@@ -83,13 +106,12 @@ func (e *Environment) IsConfigVariableTruthy(name string) bool {
 	return false
 }
 
-// GetSecretsWithPrefix returns all secrets that have the given prefix
-func (e *Environment) GetSecretsWithPrefix(prefix string) []string {
-	secrets := []string{}
-	for secretName := range e.Variables {
-		if strings.HasPrefix(secretName, prefix) {
-			secrets = append(secrets, secretName)
+func (e *Environment) GetSecretsWithPrefix(secretNamePrefix string) []string {
+	secretNames := []string{}
+	for secretName := range e.Secrets {
+		if strings.HasPrefix(secretName, secretNamePrefix) {
+			secretNames = append(secretNames, secretName)
 		}
 	}
-	return secrets
+	return secretNames
 }

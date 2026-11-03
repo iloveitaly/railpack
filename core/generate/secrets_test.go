@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestResolveSecrets(t *testing.T) {
+func TestResolveSecretsExpandsSelectorsAndCollectsNames(t *testing.T) {
 	tests := []struct {
 		name              string
 		configuredSecrets []string
@@ -88,27 +88,23 @@ func TestResolveSecrets(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buildConfig := config.EmptyConfig()
-			buildConfig.Secrets = tt.configuredSecrets
-			secrets, steps := resolveSecrets(buildConfig, tt.steps)
+			secretNames, resolvedSteps := resolvePlanSecrets(tt.configuredSecrets, tt.steps)
 
-			require.ElementsMatch(t, tt.expected, secrets)
-			require.Len(t, secrets, len(tt.expected))
+			require.ElementsMatch(t, tt.expected, secretNames)
+			require.Len(t, secretNames, len(tt.expected))
 
 			for i, expected := range tt.expectedByStep {
-				require.ElementsMatch(t, expected, steps[i].Secrets)
-				require.Len(t, steps[i].Secrets, len(expected))
+				require.ElementsMatch(t, expected, resolvedSteps[i].Secrets)
+				require.Len(t, resolvedSteps[i].Secrets, len(expected))
 			}
 		})
 	}
 }
 
 func TestResolveSecretsDoesNotMutateSteps(t *testing.T) {
-	buildConfig := config.EmptyConfig()
-	buildConfig.Secrets = []string{"GLOBAL"}
 	steps := []plan.Step{{Secrets: []string{"*"}}}
 
-	_, resolvedSteps := resolveSecrets(buildConfig, steps)
+	_, resolvedSteps := resolvePlanSecrets([]string{"GLOBAL"}, steps)
 
 	require.Equal(t, []string{"*"}, steps[0].Secrets)
 	require.Equal(t, []string{"GLOBAL"}, resolvedSteps[0].Secrets)

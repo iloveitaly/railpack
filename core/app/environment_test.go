@@ -6,12 +6,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseKeyValueStrings(t *testing.T) {
+func TestParseVariableFlagValuesResolvesExplicitAndProcessValues(t *testing.T) {
 	t.Setenv("FROM_ENV", "resolved")
-	// An explicit empty value must override a nonempty process variable.
+	t.Setenv("FROM_ENV_WITH_EQUALS", "value=with=equals==")
+	// an explicit empty value must override a nonempty process variable
 	t.Setenv("EMPTY", "this must not be inherited")
 
-	variables, err := ParseKeyValueStrings([]string{
+	variables, err := ParseVariableFlagValues([]string{
 		"VAR1=value1",
 		"VAR2=value2",
 		"RAILPACK_APT_PACKAGES=apt1,apt2",
@@ -20,6 +21,7 @@ func TestParseKeyValueStrings(t *testing.T) {
 		"RAILPACK_TRUTHY_INT_CASE= 1 ",
 		"HELLO+WORLD=boop",
 		"FROM_ENV",
+		"FROM_ENV_WITH_EQUALS",
 		"EMPTY=",
 		"MISSING",
 		"LEADING_EQUALS==value",
@@ -45,10 +47,11 @@ func TestParseKeyValueStrings(t *testing.T) {
 	require.Equal(t, env.IsConfigVariableTruthy("TRUTHY_INT_CASE"), true)
 	require.Equal(t, env.GetVariable("HELLO+WORLD"), "boop")
 	require.Equal(t, env.GetVariable("FROM_ENV"), "resolved")
+	require.Equal(t, "value=with=equals==", env.GetVariable("FROM_ENV_WITH_EQUALS"))
 	require.Contains(t, env.Variables, "EMPTY")
 	require.Empty(t, env.GetVariable("EMPTY"))
 	require.NotContains(t, env.Variables, "MISSING")
-	// Values are literal CLI arguments; only the first equals sign separates the name.
+	// values are literal CLI arguments; only the first equals sign separates the name
 	require.Equal(t, "=value", env.GetVariable("LEADING_EQUALS"))
 	require.Equal(t, "value=with=equals==", env.GetVariable("EQUALS"))
 	require.Equal(t, "  leading and trailing  ", env.GetVariable("WHITESPACE"))
@@ -68,6 +71,41 @@ func TestEnvironmentVariables(t *testing.T) {
 	env.SetVariable("NAME", "value")
 	require.Equal(t, "value", env.GetVariable("NAME"))
 	require.Equal(t, "RAILPACK_NAME", env.ConfigVariable("NAME"))
+}
+
+func TestEnvironmentWithVariablesKeepsSecretsSeparate(t *testing.T) {
+	secrets := map[string]string{
+		"RAILPACK_START_CMD": "echo secret",
+		"TOKEN":              "test-token",
+	}
+	env := NewEnvironment(&secrets)
+	analysisEnv := env.WithVariables(map[string]string{
+		"RAILPACK_START_CMD": "echo override",
+		"CGO_ENABLED":        "1",
+	})
+
+	startCommand, _ := analysisEnv.GetConfigVariable("START_CMD")
+	require.Equal(t, "echo override", startCommand)
+	require.Equal(t, "1", analysisEnv.GetVariable("CGO_ENABLED"))
+	require.Equal(t, "test-token", analysisEnv.GetVariable("TOKEN"))
+	require.Equal(t, secrets, analysisEnv.Secrets)
+	require.Empty(t, analysisEnv.GetSecretsWithPrefix("CGO_"))
+	require.Equal(t, []string{"TOKEN"}, analysisEnv.GetSecretsWithPrefix("TOKEN"))
+
+	// analysis overrides must not change the values later supplied to BuildKit as secrets
+	require.Equal(t, "echo secret", env.GetVariable("RAILPACK_START_CMD"))
+	require.NotContains(t, env.Variables, "CGO_ENABLED")
+}
+
+func TestEnvironmentWithVariablesWithoutSecrets(t *testing.T) {
+	// a pointer to a nil map can come from an example without any configured environment values
+	var secrets map[string]string
+	env := NewEnvironment(&secrets)
+	withVariables := env.WithVariables(map[string]string{"MODE": "production"})
+
+	require.Equal(t, "production", withVariables.GetVariable("MODE"))
+	require.Empty(t, withVariables.Secrets)
+	require.Empty(t, env.Variables)
 }
 
 func TestGetConfigVariable(t *testing.T) {

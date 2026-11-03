@@ -1,0 +1,76 @@
+{
+ "deploy": {
+  "base": {
+   "image": "ghcr.io/railwayapp/railpack-runtime:mise-2026.10.15"
+  },
+  "inputs": [
+   {
+    "include": [
+     "."
+    ],
+    "step": "build"
+   }
+  ],
+  "startCommand": "sh app.sh",
+  "variables": {
+   "DEPLOY_ONLY": "runtime",
+   "EMPTY": "deploy",
+   "GLOBAL_VALUE": "from-global",
+   "MODE": "deploy",
+   "RAILPACK_SHELL_SCRIPT": "app.sh",
+   "RAILPACK_VERSION": "dev",
+   "SCOPED_EMPTY": ""
+  }
+ },
+ "steps": [
+  {
+   "inputs": [
+    {
+     "image": "ghcr.io/railwayapp/railpack-builder:mise-2026.10.15"
+    }
+   ],
+   "name": "packages:mise",
+   "variables": {
+    "EMPTY": "",
+    "GLOBAL_VALUE": "from-global",
+    "MODE": "global",
+    "RAILPACK_SHELL_SCRIPT": "app.sh",
+    "SCOPED_EMPTY": "global"
+   }
+  },
+  {
+   "commands": [
+    {
+     "cmd": "chmod +x app.sh"
+    },
+    {
+     "cmd": "sh -c 'test \"$MODE\" = step \u0026\u0026 test \"$EMPTY\" = step \u0026\u0026 test \"$GLOBAL_VALUE\" = from-global \u0026\u0026 test \"${SCOPED_EMPTY+x}\" = x \u0026\u0026 test -z \"$SCOPED_EMPTY\" \u0026\u0026 test \"$STEP_ONLY\" = build'",
+     "customName": "test \"$MODE\" = step \u0026\u0026 test \"$EMPTY\" = step \u0026\u0026 test \"$GLOBAL_VALUE\" = from-global \u0026\u0026 test \"${SCOPED_EMPTY+x}\" = x \u0026\u0026 test -z \"$SCOPED_EMPTY\" \u0026\u0026 test \"$STEP_ONLY\" = build"
+    }
+   ],
+   "inputs": [
+    {
+     "step": "packages:mise"
+    },
+    {
+     "include": [
+      "."
+     ],
+     "local": true
+    }
+   ],
+   "name": "build",
+   "secrets": [
+    "*"
+   ],
+   "variables": {
+    "EMPTY": "step",
+    "GLOBAL_VALUE": "from-global",
+    "MODE": "step",
+    "RAILPACK_SHELL_SCRIPT": "app.sh",
+    "SCOPED_EMPTY": "",
+    "STEP_ONLY": "build"
+   }
+  }
+ ]
+}

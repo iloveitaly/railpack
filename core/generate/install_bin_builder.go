@@ -87,8 +87,8 @@ func (b *InstallBinStepBuilder) Build(p *plan.BuildPlan, options *BuildStepOptio
 		plan.NewPathCommand(fmt.Sprintf("%s/bin", binPath)),
 	})
 
-	// Add user variables to this step
-	maps.Copy(step.Variables, options.UserVariables)
+	// global overrides may replace defaults such as MISE_PARANOID inside the build container
+	maps.Copy(step.Variables, options.GlobalVariables)
 
 	p.Steps = append(p.Steps, *step)
 

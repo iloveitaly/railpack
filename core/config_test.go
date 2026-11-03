@@ -11,6 +11,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestGenerateConfigFromOptionsKeepsVariablesIndependent(t *testing.T) {
+	options := &GenerateBuildPlanOptions{
+		Variables: map[string]string{"MODE": "production", "EMPTY": ""},
+	}
+	generatedConfig := GenerateConfigFromOptions(options)
+	require.Equal(t, options.Variables, generatedConfig.Variables)
+
+	// edits to generated configuration must not alter the caller's reusable options
+	generatedConfig.Variables["MODE"] = "development"
+	generatedConfig.Variables["CONFIG_ONLY"] = "configured"
+	require.Equal(t, map[string]string{"MODE": "production", "EMPTY": ""}, options.Variables)
+
+	options.Variables["EMPTY"] = "updated"
+	options.Variables["OPTION_ONLY"] = "supplied"
+	require.Equal(t, map[string]string{
+		"MODE":        "development",
+		"EMPTY":       "",
+		"CONFIG_ONLY": "configured",
+	}, generatedConfig.Variables)
+}
+
 func TestGenerateConfigFromEnvironment(t *testing.T) {
 	tests := []struct {
 		name     string

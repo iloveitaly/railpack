@@ -35,8 +35,7 @@ var PlanCommand = &cli.Command{
 			return cli.Exit(err, ExitCodeFailure)
 		}
 
-		// serialize the plan to a string to dump to the plan file
-		buildResultString, err := json.MarshalIndent(planMap, "", "  ")
+		planJSON, err := json.MarshalIndent(planMap, "", "  ")
 		if err != nil {
 			return cli.Exit(err, ExitCodeFailure)
 		}
@@ -44,7 +43,7 @@ var PlanCommand = &cli.Command{
 		output := cmd.String("out")
 		if output == "" {
 			// Write to stdout if no output file specified
-			_, _ = os.Stdout.Write([]byte(buildResultString))
+			_, _ = os.Stdout.Write(planJSON)
 			_, _ = os.Stdout.Write([]byte("\n"))
 			return nil
 		} else {
@@ -52,7 +51,7 @@ var PlanCommand = &cli.Command{
 				return cli.Exit(err, ExitCodeFailure)
 			}
 
-			err = os.WriteFile(output, []byte(buildResultString), 0644)
+			err = os.WriteFile(output, planJSON, 0644)
 			if err != nil {
 				return cli.Exit(err, ExitCodeFailure)
 			}

@@ -85,6 +85,37 @@ func TestFailedBuildResult(t *testing.T) {
 	require.NotEmpty(t, result.Logs)
 }
 
+func TestGenerateBuildPlanSharesCallerLogger(t *testing.T) {
+	tests := []struct {
+		name       string
+		configFile string
+		success    bool
+	}{
+		{name: "successful plan", success: true},
+		{name: "failed plan", configFile: "missing-config.json"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			userApp, err := app.NewApp("../examples/shell-script")
+			require.NoError(t, err)
+			planLogger := logger.NewLogger()
+			planLogger.LogDeprecation("Input migration notice", "/architecture/secrets/#migration-to-10")
+
+			result, err := GenerateBuildPlan(userApp, app.NewEnvironment(nil), &GenerateBuildPlanOptions{
+				ConfigFilePath: tt.configFile,
+				Logger:         planLogger,
+			})
+			require.NoError(t, err)
+			require.Equal(t, tt.success, result.Success)
+			// planner messages must reach the caller's logger without copying or duplicating the input notice
+			require.Greater(t, len(planLogger.Logs), 1)
+			require.Equal(t, planLogger.Logs, result.Logs)
+			require.Equal(t, logger.Deprecation, result.Logs[0].Level)
+			require.Equal(t, "/architecture/secrets/#migration-to-10", result.Logs[0].DocsPath)
+		})
+	}
+}
+
 func TestDisablePlanCaches(t *testing.T) {
 	newPlan := func() *plan.BuildPlan {
 		return &plan.BuildPlan{
@@ -149,8 +180,8 @@ func TestGenerateBuildPlan_DisableCachesRequiresEnvironmentArgument(t *testing.T
 	require.True(t, buildResult.Success)
 	require.Contains(t, buildResult.Plan.Caches, "gradle")
 
-	envVars := map[string]string{"RAILPACK_DISABLE_CACHES": "gradle"}
-	buildResult, err = GenerateBuildPlan(userApp, app.NewEnvironment(&envVars), &GenerateBuildPlanOptions{})
+	envVariables := map[string]string{"RAILPACK_DISABLE_CACHES": "gradle"}
+	buildResult, err = GenerateBuildPlan(userApp, app.NewEnvironment(&envVariables), &GenerateBuildPlanOptions{})
 	require.NoError(t, err)
 	require.True(t, buildResult.Success)
 	require.NotContains(t, buildResult.Plan.Caches, "gradle")
@@ -164,7 +195,7 @@ func TestGenerateBuildPlanUserVariablesOverrideProviderVariables(t *testing.T) {
 	require.NoError(t, err)
 
 	buildResult, err := GenerateBuildPlan(userApp, app.NewEnvironment(nil), &GenerateBuildPlanOptions{
-		Vars: map[string]string{"PYTHONUNBUFFERED": "0"},
+		Variables: map[string]string{"PYTHONUNBUFFERED": "0"},
 	})
 	require.NoError(t, err)
 
@@ -173,6 +204,103 @@ func TestGenerateBuildPlanUserVariablesOverrideProviderVariables(t *testing.T) {
 	require.NotEmpty(t, buildResult.Plan.Steps)
 	for _, step := range buildResult.Plan.Steps {
 		require.Equal(t, "0", step.Variables["PYTHONUNBUFFERED"], "step %q should use the user-provided value", step.Name)
+	}
+}
+
+func TestGenerateBuildPlanGlobalVariables(t *testing.T) {
+	tests := []struct {
+		name              string
+		variableOverrides map[string]string
+		mode              string
+		globalValue       string
+		scopedEmpty       string
+	}{
+		{name: "config variables", mode: "global", globalValue: "from-global", scopedEmpty: "global"},
+		{name: "CLI overrides global defaults", variableOverrides: map[string]string{"MODE": "cli", "GLOBAL_VALUE": "cli", "SCOPED_EMPTY": "cli"}, mode: "cli", globalValue: "cli", scopedEmpty: "cli"},
+		{name: "empty CLI override", variableOverrides: map[string]string{"MODE": ""}, mode: "", globalValue: "from-global", scopedEmpty: "global"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			userApp, err := app.NewApp("../examples/variables")
+			require.NoError(t, err)
+			secrets := map[string]string{"TOKEN": "build-only"}
+			env := app.NewEnvironment(&secrets)
+			originalVariables := maps.Clone(tt.variableOverrides)
+
+			result, err := GenerateBuildPlan(userApp, env, &GenerateBuildPlanOptions{Variables: tt.variableOverrides})
+			require.NoError(t, err)
+			require.True(t, result.Success, "%v", result.Logs)
+			// the example has app.sh instead of start.sh, so detection requires the global RAILPACK_SHELL_SCRIPT
+			require.Equal(t, []string{"shell"}, result.DetectedProviders)
+			require.ElementsMatch(t, []string{"TOKEN"}, result.Plan.Secrets)
+			require.NotEmpty(t, result.Plan.Steps)
+			for _, step := range result.Plan.Steps {
+				require.Contains(t, step.Variables, "MODE", step.Name)
+				require.Contains(t, step.Variables, "EMPTY", step.Name)
+				require.Equal(t, tt.globalValue, step.Variables["GLOBAL_VALUE"], step.Name)
+				require.NotContains(t, step.Variables, "TOKEN", step.Name)
+				require.NotContains(t, step.Variables, "DEPLOY_ONLY", step.Name)
+				if step.Name == "build" {
+					require.Equal(t, "step", step.Variables["MODE"])
+					require.Equal(t, "step", step.Variables["EMPTY"])
+					require.Contains(t, step.Variables, "SCOPED_EMPTY")
+					require.Empty(t, step.Variables["SCOPED_EMPTY"])
+					require.Equal(t, "build", step.Variables["STEP_ONLY"])
+					continue
+				}
+				require.Equal(t, tt.mode, step.Variables["MODE"], step.Name)
+				require.Empty(t, step.Variables["EMPTY"], step.Name)
+				require.Equal(t, tt.scopedEmpty, step.Variables["SCOPED_EMPTY"], step.Name)
+			}
+			require.Equal(t, "deploy", result.Plan.Deploy.Variables["MODE"])
+			require.Equal(t, "deploy", result.Plan.Deploy.Variables["EMPTY"])
+			require.Equal(t, tt.globalValue, result.Plan.Deploy.Variables["GLOBAL_VALUE"])
+			require.Contains(t, result.Plan.Deploy.Variables, "SCOPED_EMPTY")
+			require.Empty(t, result.Plan.Deploy.Variables["SCOPED_EMPTY"])
+			require.Equal(t, "runtime", result.Plan.Deploy.Variables["DEPLOY_ONLY"])
+			require.NotContains(t, result.Plan.Deploy.Variables, "STEP_ONLY")
+			require.NotContains(t, result.Plan.Deploy.Variables, "TOKEN")
+			require.Equal(t, originalVariables, tt.variableOverrides)
+			require.Equal(t, map[string]string{"TOKEN": "build-only"}, env.Variables)
+		})
+	}
+}
+
+func TestGlobalVariablesConfigureBuildPlan(t *testing.T) {
+	// keep conflicting settings in the same file to check configuration precedence before provider planning
+	configJSON := `{
+		"variables": {"RAILPACK_START_CMD": "echo global", "PYTHONUNBUFFERED": "0"},
+		"deploy": {"startCommand": "echo deploy", "variables": {"PYTHONUNBUFFERED": "1"}}
+	}`
+	tests := []struct {
+		name    string
+		options GenerateBuildPlanOptions
+		start   string
+	}{
+		{name: "global configuration", start: "echo global"},
+		{name: "CLI environment override", options: GenerateBuildPlanOptions{Variables: map[string]string{"RAILPACK_START_CMD": "echo env"}}, start: "echo env"},
+		{name: "CLI command override", options: GenerateBuildPlanOptions{StartCommand: "echo flag"}, start: "echo flag"},
+	}
+	configPath := filepath.Join(t.TempDir(), "railpack.json")
+	require.NoError(t, os.WriteFile(configPath, []byte(configJSON), 0644))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			userApp, err := app.NewApp("../examples/python-pip")
+			require.NoError(t, err)
+			// config paths resolve against the app, including paths to an external config file
+			tt.options.ConfigFilePath, err = filepath.Rel(userApp.Source, configPath)
+			require.NoError(t, err)
+			result, err := GenerateBuildPlan(userApp, app.NewEnvironment(nil), &tt.options)
+			require.NoError(t, err)
+			require.True(t, result.Success, "%v", result.Logs)
+			require.Equal(t, tt.start, result.Plan.Deploy.StartCmd)
+			require.Equal(t, "1", result.Plan.Deploy.Variables["PYTHONUNBUFFERED"])
+			for _, step := range result.Plan.Steps {
+				require.Equal(t, "0", step.Variables["PYTHONUNBUFFERED"], step.Name)
+			}
+			require.Empty(t, result.Plan.Secrets)
+		})
 	}
 }
 
@@ -208,7 +336,6 @@ func TestGenerateConfigFromFile_Malformed(t *testing.T) {
 }
 
 func TestGetConfig_MergesEnvironmentAndFileSecrets(t *testing.T) {
-	// write a railpack.json file with some secrets
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, defaultConfigFileName)
 	err := os.WriteFile(configPath, []byte(`{"secrets":["VITE_APP_TITLE","FILE_ONLY_SECRET"]}`), 0644)
@@ -217,15 +344,14 @@ func TestGetConfig_MergesEnvironmentAndFileSecrets(t *testing.T) {
 	userApp, err := app.NewApp(tempDir)
 	require.NoError(t, err)
 
-	envVars := map[string]string{
+	envVariables := map[string]string{
 		"DATABASE_URL":      "postgres://localhost/mydb",
 		"SENTRY_AUTH_TOKEN": "sntrx_abc",
-		// this should win against the file config
-		"VITE_APP_TITLE": "MyApp",
-		"MY_SECRET":      "s3cret",
+		"VITE_APP_TITLE":    "MyApp",
+		"MY_SECRET":         "s3cret",
 	}
 
-	env := app.NewEnvironment(&envVars)
+	env := app.NewEnvironment(&envVariables)
 	config, err := GetConfig(userApp, env, &GenerateBuildPlanOptions{}, logger.NewLogger())
 	require.NoError(t, err)
 

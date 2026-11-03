@@ -66,8 +66,8 @@ func (b *ImageStepBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions) e
 		}
 	}
 
-	// Add user variables to this step
-	maps.Copy(step.Variables, options.UserVariables)
+	// global variables override ENV inherited from the selected image
+	maps.Copy(step.Variables, options.GlobalVariables)
 
 	p.Steps = append(p.Steps, *step)
 

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "variables": {
+    "MODE": "global",
+    "EMPTY": "",
+    "GLOBAL_VALUE": "from-global",
+    "RAILPACK_SHELL_SCRIPT": "globals.sh"
+  },
+  "steps": {
+    "build": {
+      "commands": [
+        "...",
+        "test \"$MODE\" = global && test \"${EMPTY+x}\" = x && test -z \"$EMPTY\" && test \"$GLOBAL_VALUE\" = from-global"
+      ]
+    }
+  }
+}

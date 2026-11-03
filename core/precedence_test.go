@@ -54,7 +54,7 @@ func TestGetConfig_StartCommandPrecedence(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := loadTestConfig(t, tt.file, tt.env, tt.options)
+			cfg := loadConfigForPrecedenceTest(t, tt.file, tt.env, tt.options)
 			require.Equal(t, tt.want, cfg.Deploy.StartCmd)
 		})
 	}
@@ -90,8 +90,8 @@ func TestGetConfig_BuildCommandPrecedence(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := loadTestConfig(t, tt.file, tt.env, tt.options)
-			require.Equal(t, tt.want, lastBuildCommand(cfg))
+			cfg := loadConfigForPrecedenceTest(t, tt.file, tt.env, tt.options)
+			require.Equal(t, tt.want, lastBuildCommandText(cfg))
 		})
 	}
 }
@@ -175,28 +175,33 @@ func TestGenerateBuildPlan_StartCommandPrecedence(t *testing.T) {
 	}
 }
 
-func loadTestConfig(t *testing.T, fileJSON string, envVars map[string]string, options *GenerateBuildPlanOptions) *c.Config {
+// exercise production configuration precedence using a temporary config file
+//
+// configJSON={"deploy":{"startCommand":"file"}}, planningVariables={"RAILPACK_START_CMD":"env"}
+// -> Deploy.StartCmd="env" when no CLI command override is supplied
+func loadConfigForPrecedenceTest(t *testing.T, configJSON string, planningVariables map[string]string, planOptions *GenerateBuildPlanOptions) *c.Config {
 	t.Helper()
 
 	dir := t.TempDir()
-	if fileJSON != "" {
-		require.NoError(t, os.WriteFile(filepath.Join(dir, defaultConfigFileName), []byte(fileJSON), 0644))
+	if configJSON != "" {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, defaultConfigFileName), []byte(configJSON), 0644))
 	}
 
 	userApp, err := app.NewApp(dir)
 	require.NoError(t, err)
 
-	if options == nil {
-		options = &GenerateBuildPlanOptions{}
+	if planOptions == nil {
+		planOptions = &GenerateBuildPlanOptions{}
 	}
 
-	cfg, err := GetConfig(userApp, app.NewEnvironment(&envVars), options, logger.NewLogger())
+	buildConfig, err := GetConfig(userApp, app.NewEnvironment(&planningVariables), planOptions, logger.NewLogger())
 	require.NoError(t, err)
-	return cfg
+	return buildConfig
 }
 
-func lastBuildCommand(cfg *c.Config) string {
-	step, ok := cfg.Steps["build"]
+// use the display name to recover original command text before shell wrapping
+func lastBuildCommandText(buildConfig *c.Config) string {
+	step, ok := buildConfig.Steps["build"]
 	if !ok {
 		return ""
 	}

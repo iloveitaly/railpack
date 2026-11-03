@@ -350,8 +350,8 @@ func (b *MiseStepBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions) er
 	step.Assets = b.Assets
 	step.Secrets = []string{}
 
-	// Add user variables to this step
-	maps.Copy(step.Variables, options.UserVariables)
+	// apply global overrides after generated tool paths, provider defaults, and forwarded verbosity
+	maps.Copy(step.Variables, options.GlobalVariables)
 
 	p.Steps = append(p.Steps, *step)
 

@@ -20,7 +20,7 @@ import (
 type BuildStepOptions struct {
 	ResolvedPackages map[string]*resolver.ResolvedPackage
 	Caches           *CacheContext
-	UserVariables    map[string]string
+	GlobalVariables  map[string]string
 }
 
 type StepBuilder interface {
@@ -39,8 +39,8 @@ type GenerateContext struct {
 	Steps     []StepBuilder
 	Deploy    *DeployBuilder
 
-	Caches        *CacheContext
-	UserVariables map[string]string
+	Caches          *CacheContext
+	GlobalVariables map[string]string
 
 	SubContexts []string
 
@@ -98,12 +98,15 @@ func NewGenerateContext(app *a.App, env *a.Environment, config *config.Config, l
 		Steps:           make([]StepBuilder, 0),
 		Deploy:          NewDeployBuilder(),
 		Caches:          NewCacheContext(),
-		UserVariables:   make(map[string]string),
+		GlobalVariables: make(map[string]string),
 		Metadata:        NewMetadata(),
 		Resolver:        resolver,
 		Logger:          logger,
 		dockerignoreCtx: dockerignoreCtx,
 	}
+
+	// global variables combine root defaults and CLI --env values
+	maps.Copy(ctx.GlobalVariables, config.Variables)
 
 	// Path discovery must not return files that BuildKit will never load.
 	if err := app.SetExcludePatterns(ctx.ExcludePatterns()); err != nil {
@@ -181,7 +184,7 @@ func (c *GenerateContext) Generate() (*plan.BuildPlan, map[string]*resolver.Reso
 	buildStepOptions := &BuildStepOptions{
 		ResolvedPackages: resolvedPackages,
 		Caches:           c.Caches,
-		UserVariables:    c.UserVariables,
+		GlobalVariables:  c.GlobalVariables,
 	}
 
 	for _, stepBuilder := range c.Steps {
@@ -195,8 +198,19 @@ func (c *GenerateContext) Generate() (*plan.BuildPlan, map[string]*resolver.Reso
 	buildPlan.Caches = c.Caches.Caches
 	c.Deploy.Build(buildPlan, buildStepOptions)
 
+	// scoped configuration takes precedence over provider defaults and global variables
+	for i := range buildPlan.Steps {
+		step := &buildPlan.Steps[i]
+		if configuredStep := c.Config.Steps[step.Name]; configuredStep != nil {
+			maps.Copy(step.Variables, configuredStep.Variables)
+		}
+	}
+	if c.Config.Deploy != nil {
+		maps.Copy(buildPlan.Deploy.Variables, c.Config.Deploy.Variables)
+	}
+
 	buildPlan.Normalize()
-	buildPlan.Secrets, buildPlan.Steps = resolveSecrets(c.Config, buildPlan.Steps)
+	buildPlan.Secrets, buildPlan.Steps = resolvePlanSecrets(c.Config.Secrets, buildPlan.Steps)
 
 	return buildPlan, resolvedPackages, nil
 }
@@ -271,7 +285,6 @@ func (c *GenerateContext) applyConfig() {
 		c.applyDeployAptPackages()
 		c.Deploy.DeployInputs = plan.Spread(c.Config.Deploy.Inputs, c.Deploy.DeployInputs)
 		c.Deploy.Paths = plan.SpreadStrings(c.Config.Deploy.Paths, c.Deploy.Paths)
-		maps.Copy(c.Deploy.Variables, c.Config.Deploy.Variables)
 	}
 
 	// A spread retains generated deploy composition; any explicit list without one takes full control.
@@ -303,7 +316,6 @@ func (c *GenerateContext) applyConfig() {
 		commandStepBuilder.Commands = plan.Spread(configStep.Commands, commandStepBuilder.Commands)
 		commandStepBuilder.Secrets = plan.SpreadStrings(configStep.Secrets, commandStepBuilder.Secrets)
 		commandStepBuilder.Caches = plan.SpreadStrings(configStep.Caches, commandStepBuilder.Caches)
-		commandStepBuilder.AddEnvVars(configStep.Variables)
 		maps.Copy(commandStepBuilder.Assets, configStep.Assets)
 
 		// Convert the deploy outputs into layers that will be added to the deploy.

@@ -12,7 +12,7 @@ import (
 	"github.com/railwayapp/railpack/core/app"
 	c "github.com/railwayapp/railpack/core/config"
 	"github.com/railwayapp/railpack/core/generate"
-	"github.com/railwayapp/railpack/core/logger"
+	planlogger "github.com/railwayapp/railpack/core/logger"
 	"github.com/railwayapp/railpack/core/mise"
 	"github.com/railwayapp/railpack/core/plan"
 	"github.com/railwayapp/railpack/core/providers"
@@ -32,7 +32,10 @@ type GenerateBuildPlanOptions struct {
 	PreviousVersions         map[string]string
 	ConfigFilePath           string
 	ErrorMissingStartCommand bool // enabled on railway
-	Vars                     map[string]string
+	// environment variables saved in every build step and the runtime image
+	Variables map[string]string
+	// reuse the plan logger when the caller records messages before generation starts
+	Logger *planlogger.Logger
 }
 
 type BuildResult struct {
@@ -41,7 +44,7 @@ type BuildResult struct {
 	ResolvedPackages  map[string]*resolver.ResolvedPackage `json:"resolvedPackages,omitempty"`
 	Metadata          map[string]string                    `json:"metadata,omitempty"`
 	DetectedProviders []string                             `json:"detectedProviders,omitempty"`
-	Logs              []logger.Msg                         `json:"logs,omitempty"`
+	Logs              []planlogger.Msg                     `json:"logs,omitempty"`
 	// always serialized so consumers of the info file can read the outcome of a failed build
 	Success bool `json:"success"`
 }
@@ -71,15 +74,21 @@ func readConfigJSON(path string, v any) error {
 // returned only for transient failures (see mise.IsTemporary), which say nothing about
 // the app itself and are worth retrying.
 func GenerateBuildPlan(app *app.App, env *app.Environment, options *GenerateBuildPlanOptions) (*BuildResult, error) {
-	logger := logger.NewLogger()
+	logger := options.Logger
+	if logger == nil {
+		logger = planlogger.NewLogger()
+	}
 
-	// Make --env values available when reading configuration and detecting providers
-	env = env.WithVariables(options.Vars)
+	// make environment variables available when reading configuration and detecting providers
+	env = env.WithVariables(options.Variables)
 
 	config, err := GetConfig(app, env, options, logger)
 	if err != nil {
 		return failedBuildResult(logger, err)
 	}
+
+	// global variables also configure provider detection and tool version selection
+	env = env.WithVariables(config.Variables)
 
 	ctx, err := generate.NewGenerateContext(app, env, config, logger)
 	if err != nil {
@@ -91,11 +100,6 @@ func GenerateBuildPlan(app *app.App, env *app.Environment, options *GenerateBuil
 		for name, version := range options.PreviousVersions {
 			ctx.Resolver.SetPreviousVersion(name, version)
 		}
-	}
-
-	// options.Vars contains CLI --env values, which apply to every build step
-	if options.Vars != nil {
-		maps.Copy(ctx.UserVariables, options.Vars)
 	}
 
 	// Figure out what providers to use
@@ -200,7 +204,7 @@ func disablePlanCaches(buildPlan *plan.BuildPlan, disabledCaches []string) {
 
 // records a planning failure in the build result. Transient failures are also returned
 // as an error so callers can tell them apart from a deterministic failure of the app.
-func failedBuildResult(logger *logger.Logger, err error) (*BuildResult, error) {
+func failedBuildResult(logger *planlogger.Logger, err error) (*BuildResult, error) {
 	logger.LogError("%s", err.Error())
 
 	result := &BuildResult{Success: false, Logs: logger.Logs}
@@ -211,38 +215,32 @@ func failedBuildResult(logger *logger.Logger, err error) (*BuildResult, error) {
 	return result, nil
 }
 
-// merges the options, environment, and file config into a single config
-// note that this is not run in the frontend process, since the buildkit frontend consumed the "compiled" railpack-plan.json which this logic helps generate
-func GetConfig(app *app.App, env *app.Environment, options *GenerateBuildPlanOptions, logger *logger.Logger) (*c.Config, error) {
-	// cli options first, takes precedence over environment and file config
-	cliOptionsConfig := GenerateConfigFromOptions(options)
+// merge planning configuration with CLI options taking precedence over environment settings and file values
+func GetConfig(app *app.App, env *app.Environment, options *GenerateBuildPlanOptions, logger *planlogger.Logger) (*c.Config, error) {
+	commandLineConfig := GenerateConfigFromOptions(options)
 
-	// environment variables next, takes precedence over file config
-	envConfig := GenerateConfigFromEnvironment(env)
-
-	// file config last
 	fileConfig, err := GenerateConfigFromFile(app, env, options, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	// NOTE incredibly important line! This defined the precedence order for most of the configuration (right to left)
-	mergedConfig := c.Merge(fileConfig, envConfig, cliOptionsConfig)
+	// read RAILPACK_* settings after applying root defaults and CLI variable overrides
+	env = env.WithVariables(fileConfig.Variables).WithVariables(options.Variables)
+	environmentConfig := GenerateConfigFromEnvironment(env)
 
-	// Secrets are unique: the values are *not* part of the configuration/railpack plan, only the names are
-	// the values are only provided to the build system (either directly to the buildctl / docker build cmd, or to `railpack build`)
-	// Additionally, it would unintuitive for a CLI option to replace a file-provided secret instead of concatenating them.
-	// For this reason, we merge the list of secret names together and deduplicate them.
+	// later configs override earlier values, except secret names which accumulate across sources
+	mergedConfig := c.Merge(fileConfig, environmentConfig, commandLineConfig)
+
+	// plans contain secret names only; their values are supplied separately to BuildKit
 	mergedConfig.Secrets = utils.RemoveDuplicates(slices.Concat(
 		fileConfig.Secrets,
-		envConfig.Secrets,
-		// cli options don't define secrets
+		environmentConfig.Secrets,
 	))
 
 	return mergedConfig, nil
 }
 
-func GenerateConfigFromFile(app *app.App, env *app.Environment, options *GenerateBuildPlanOptions, logger *logger.Logger) (*c.Config, error) {
+func GenerateConfigFromFile(app *app.App, env *app.Environment, options *GenerateBuildPlanOptions, logger *planlogger.Logger) (*c.Config, error) {
 	config := c.EmptyConfig()
 
 	configFileName := defaultConfigFileName
@@ -317,7 +315,7 @@ func GenerateConfigFromEnvironment(env *app.Environment) *c.Config {
 		config.Deploy.AptPackages = aptPackages
 	}
 
-	// Only --secret values contribute secret names; --env values remain ordinary environment variables
+	// only build-secret inputs contribute secret names; environment variables stay separate
 	config.Secrets = append(config.Secrets, slices.Sorted(maps.Keys(env.Secrets))...)
 
 	return config
@@ -343,8 +341,7 @@ func GenerateConfigFromOptions(options *GenerateBuildPlanOptions) *c.Config {
 		config.Deploy.StartCmd = options.StartCommand
 	}
 
-	// CLI --env values override railpack.json deploy.variables when the configurations are merged
-	maps.Copy(config.Deploy.Variables, options.Vars)
+	config.Variables = options.Variables
 
 	return config
 }

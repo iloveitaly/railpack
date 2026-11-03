@@ -34,6 +34,7 @@ type Config struct {
 	Packages         map[string]string      `json:"packages,omitempty" jsonschema:"description=Map of package name to package version"`
 	Caches           map[string]*plan.Cache `json:"caches,omitempty" jsonschema:"description=Map of cache name to cache definitions. The cache key can be referenced in an exec command"`
 	Secrets          []string               `json:"secrets,omitempty" jsonschema:"description=Secrets that should be made available to build commands"`
+	Variables        map[string]string      `json:"variables,omitempty" jsonschema:"description=Environment variables available in every build step and the runtime image. CLI --env values override these defaults; step and deploy variables take precedence over both"`
 	Exclude          []string               `json:"exclude,omitempty" jsonschema:"description=File patterns to exclude from the build context (alternative to .dockerignore). Supports negation patterns starting with ! to include files that would otherwise be excluded"`
 }
 

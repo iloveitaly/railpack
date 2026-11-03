@@ -1,0 +1,9 @@
+[
+  {
+    "expectedOutput": "variables-build-succeeded:deploy"
+  },
+  {
+    "configFile": "railpack.globals.json",
+    "expectedOutput": "variables-global-succeeded:global"
+  }
+]

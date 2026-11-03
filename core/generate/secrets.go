@@ -3,68 +3,71 @@ package generate
 import (
 	"slices"
 
-	"github.com/railwayapp/railpack/core/config"
 	"github.com/railwayapp/railpack/core/plan"
 	"github.com/railwayapp/railpack/internal/utils"
 )
 
-// Secret resolution from config declarations into build plans belongs in this file
-// Concrete secrets are named secrets rather than selectors such as "*" and "..."
-// The wildcard catalog contains concrete top-level config names, while the plan catalog
-// also contains concrete names inferred from individual steps
+// resolve step selectors and collect all names needed by BuildKit without changing the input steps
+//
+// wildcards expand only to top-level names, keeping inferred names scoped to their declaring steps
+//
+// configured=["GLOBAL"], steps=[{Secrets:["*", "LOCAL"]}]
+// -> names=["GLOBAL", "LOCAL"], steps=[{Secrets:["GLOBAL", "LOCAL"]}]
+func resolvePlanSecrets(configuredSecretDeclarations []string, buildSteps []plan.Step) (planSecretNames []string, resolvedSteps []plan.Step) {
+	configuredSecretNames := filterSecretNamesFromDeclarations(configuredSecretDeclarations)
+	planSecretNames = collectPlanSecretNames(configuredSecretNames, buildSteps)
+	preserveWildcardForCacheInvalidation := len(planSecretNames) == 0
+	resolvedSteps = slices.Clone(buildSteps)
 
-// Resolves step selectors and builds the catalog of configured and inferred secrets
-func resolveSecrets(buildConfig *config.Config, steps []plan.Step) ([]string, []plan.Step) {
-	configuredSecrets := concreteSecrets(buildConfig.Secrets)
-	secrets := collectSecrets(configuredSecrets, steps)
-	preserveWildcard := len(secrets) == 0
-	resolvedSteps := slices.Clone(steps)
-
-	for i := range resolvedSteps {
-		resolvedSteps[i].Secrets = resolveStepSecrets(
-			resolvedSteps[i].Secrets,
-			configuredSecrets,
-			preserveWildcard,
+	for stepIndex := range resolvedSteps {
+		resolvedSteps[stepIndex].Secrets = resolveStepSecretDeclarations(
+			resolvedSteps[stepIndex].Secrets,
+			configuredSecretNames,
+			preserveWildcardForCacheInvalidation,
 		)
 	}
 
-	return secrets, resolvedSteps
+	return planSecretNames, resolvedSteps
 }
 
-// Collects the concrete configured and step-level names in their original order
-func collectSecrets(configuredSecrets []string, steps []plan.Step) []string {
-	secrets := slices.Clone(configuredSecrets)
-	for _, step := range steps {
-		secrets = append(secrets, concreteSecrets(step.Secrets)...)
+func collectPlanSecretNames(configuredSecretNames []string, buildSteps []plan.Step) []string {
+	secretNames := slices.Clone(configuredSecretNames)
+	for _, step := range buildSteps {
+		secretNames = append(secretNames, filterSecretNamesFromDeclarations(step.Secrets)...)
 	}
 
-	return utils.RemoveDuplicates(secrets)
+	return utils.RemoveDuplicates(secretNames)
 }
 
-// Expands wildcards unless an empty catalog requires preserving cache semantics
-func resolveStepSecrets(stepSecrets, configuredSecrets []string, preserveWildcard bool) []string {
-	resolvedSecrets := make([]string, 0, len(stepSecrets)+len(configuredSecrets))
-	for _, secret := range stepSecrets {
-		switch secret {
+// resolve a step's secret declarations for cache invalidation
+//
+// - "*" expands to root-configured names; plans with no named secrets keep "*" for cache invalidation
+// - "..." was handled when merging step configuration and must not reach BuildKit as a secret name
+//
+// (["*", "LOCAL", "..."], ["GLOBAL"], false) -> ["GLOBAL", "LOCAL"]
+// (["*"], [], true) -> ["*"]
+func resolveStepSecretDeclarations(stepSecretDeclarations, configuredSecretNames []string, preserveWildcardForCacheInvalidation bool) []string {
+	resolvedSecretNames := make([]string, 0, len(stepSecretDeclarations)+len(configuredSecretNames))
+	for _, secretDeclaration := range stepSecretDeclarations {
+		switch secretDeclaration {
 		case "*":
-			if preserveWildcard {
-				resolvedSecrets = append(resolvedSecrets, secret)
-			} else {
-				resolvedSecrets = append(resolvedSecrets, configuredSecrets...)
+			if preserveWildcardForCacheInvalidation {
+				resolvedSecretNames = append(resolvedSecretNames, secretDeclaration)
+				continue
 			}
+			resolvedSecretNames = append(resolvedSecretNames, configuredSecretNames...)
 		case "...":
 			continue
 		default:
-			resolvedSecrets = append(resolvedSecrets, secret)
+			resolvedSecretNames = append(resolvedSecretNames, secretDeclaration)
 		}
 	}
 
-	return utils.RemoveDuplicates(resolvedSecrets)
+	return utils.RemoveDuplicates(resolvedSecretNames)
 }
 
-// Removes access selectors that are not concrete secret names
-func concreteSecrets(secrets []string) []string {
-	return slices.DeleteFunc(slices.Clone(secrets), func(secret string) bool {
-		return secret == "*" || secret == "..."
+func filterSecretNamesFromDeclarations(secretDeclarations []string) []string {
+	return slices.DeleteFunc(slices.Clone(secretDeclarations), func(secretDeclaration string) bool {
+		return secretDeclaration == "*" || secretDeclaration == "..."
 	})
 }
