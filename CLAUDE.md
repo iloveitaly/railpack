@@ -17,26 +17,21 @@ built on BuildKit with support for Node, Python, Go, PHP, and more.
 
 Follow these instructions carefully when writing code:
 
-- When writing a comment describing a function, do not start the comment with the name of the function
-- Assume the person reading this code is an expert software engineer, but is not familiar with the internals of every system or the nuances of every target language/runtime. Include concise one-line comments explaining key hooks, API usage, blocks of logic, and non-obvious language/runtime quirks (e.g., evaluation order, SDK vs. runtime versioning schemes) in both code and test files to help the reader quickly understand what you've written.
-- Add a concise one-line comment above functions whose purpose is not
-  immediately obvious. Describe their role or why they exist without starting
-  the comment with the function name.
+- Assume the person reading this code is an expert software engineer, but is not familiar with the internals of every system or the nuances of every target language/runtime.
+  Include concise one-line comments explaining key hooks, API usage, blocks of logic, and non-obvious language/runtime quirks (e.g., evaluation order, SDK vs. runtime versioning schemes)
+  in both code and test files to help the reader quickly understand what you've written.
 - Follow Go conventions and existing patterns in the codebase
 - Prefer modern Go standard-library APIs and idioms supported by the Go version
   pinned in `mise.toml` when they make the code clearer or simpler.
 - Assume no external Go applications consume this project as a library; exported
   APIs only need compatibility with in-repository consumers unless stated otherwise.
 - Prefer early `return`s or `continue`s to `if` nesting
+- Prefer longer self-documented variable and function names to shorter more concise names
 - Use appropriate error handling with proper error wrapping
-- Do not write comments that are obvious from the code itself; focus on
-  explaining why something is done, not what it does
-- Do not end one-line comments with a period
 - Do not preserve behavior or add complexity solely to avoid snapshot changes;
   update and review snapshots when intended behavior changes
-- Seriously, do not write comments that are obvious from the code itself.
-- Do not write one-line functions
 - Always use the App abstraction for file system operations.
+- Do not write one-line functions
 - When configuring Mise settings, prefer TOML settings in the generated
   `mise.toml` (via `AddMiseSetting`) over environment variables, so users can
   override defaults with their own `mise.toml`.
@@ -49,6 +44,95 @@ Follow these instructions carefully when writing code:
   required. Put reference URLs on their own comment line. Do not reuse another
   framework's spellings (`production` vs `prod`, `false` vs `0`): a lookalike
   value can select a different mode or stay truthy.
+
+## Comments
+
+Think carefully and follow instructions when writing code comments:
+
+- Add a concise one-line comment above functions whose purpose is not
+  immediately obvious. Describe their role or why they exist without starting
+  the comment with the function name.
+- Do not write comments that are obvious from the code itself; focus on
+  explaining why something is done, not what it does
+- One-line comments should be lowercase and not end with a period
+- When writing a comment describing a function, do not start the comment with the name of the function
+- Use descriptive function parameter names that explain what the values represent;
+  only use generic names such as `args` or `data` when the function is extremely
+  easy to understand.
+- When function inputs or outputs use general-purpose data structures such as
+  slices or maps, include a concrete example input and output in the function
+  comment so readers can understand their contents and the transformation.
+
+Here's an example:
+
+```go
+// Extracts deduplicated variable names from a set of input variables
+//
+// - `--env` or `--secre` generates a list of strings in the `VAR` or `VAR=VALUE` format, which is what is parsed here
+// - Variables are not checked against the process environment, this is left to the caller
+//
+// ["TOKEN=abc=123", "API_KEY", "TOKEN=other"] -> {"TOKEN": {}, "API_KEY": {}}
+func extractVariableNamesFromFlagArgs(variableFlagValues []string) map[string]struct{} {
+  // ...
+}
+```
+
+Note the `-` bullets where multiple distinct details are worth documenting.
+
+However, only use multi-line comments for functions that whose complexity or lack of clear purpose deserve it. 
+A long multi-line comment like the one above is fine if we are documenting business logic or design decisions that aren't obvious
+from the code itself.
+
+Here's an example of a function with a shorter and concise comment given it's simple and obvious purpose:
+
+```go
+// reports whether the Expo project is configured to export a static
+// web build. Expo produces a single-page app when web output is "static" or
+// "single" and react-native-web is present to render the app in the browser.
+func (p *NodeProvider) isExpoSPA(ctx *generate.GenerateContext) bool {
+	if !p.isExpo(ctx) {
+		return false
+	}
+
+	// react-native-web is what actually renders the app for the browser; without
+	// it there is no web target to export.
+	if !p.hasDependency("react-native-web") {
+		return false
+	}
+
+	// Expo's web output modes are documented at
+	// https://docs.expo.dev/versions/latest/config/app/#output.
+	output := strings.ToLower(p.getExpoWebOutput(ctx))
+	return output == "static" || output == "single"
+}
+```
+
+Often they'll be future `TODO`s embedded in a func comment. Here's how they should be formatted:
+
+```go 
+// extracts deduplicated variable names from a set of input variables
+// 
+// TODO refactor when we launch the latest version
+func extractVariableNamesFromFlagArgs(variableFlagValues []string) map[string]struct{} {
+  // ...
+}
+```
+
+Here's an example which does not deserve any documentation because it's completely self-documenting:
+
+```go
+func RemoveDuplicates[T comparable](sliceList []T) []T {
+	allKeys := make(map[T]bool)
+	list := []T{}
+	for _, item := range sliceList {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			list = append(list, item)
+		}
+	}
+	return list
+}
+```
 
 # Workflow
 
