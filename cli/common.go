@@ -91,10 +91,10 @@ func extractVariableNamesFromFlagArgs(variableFlagValues []string) map[string]st
 	return variableNames
 }
 
-// select persistent --env behavior and record a migration notice unless explicitly opted in
+// select the future environment-flag behavior, recording a migration notice unless explicitly opted in
 //
 // TODO(stable): remove mode selection and migration notices when environment-variable behavior becomes the 1.0 default
-func shouldPersistEnvironmentVariables(command *cli.Command, planLogger *logger.Logger) bool {
+func shouldUseFutureEnvironmentFlagBehavior(command *cli.Command, planLogger *logger.Logger) bool {
 	if command.Bool("future-env") {
 		return true
 	}
@@ -132,7 +132,7 @@ func parseEnvironmentFlags(command *cli.Command, planLogger *logger.Logger) (env
 		return nil, nil, fmt.Errorf("error parsing --secret values: %w", err)
 	}
 
-	if !shouldPersistEnvironmentVariables(command, planLogger) {
+	if !shouldUseFutureEnvironmentFlagBehavior(command, planLogger) {
 		maps.Copy(buildSecrets, environmentVariables)
 		return nil, buildSecrets, nil
 	}

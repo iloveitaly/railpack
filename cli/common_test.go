@@ -287,7 +287,7 @@ func TestGenerateBuildResultForCommand_EnvAffectsConfigurationAndProvidersInBoth
 }
 
 // TODO(stable): remove the compatibility notice test when the 1.0 release removes migration notices
-func TestShouldPersistEnvironmentVariables_RecordsDeprecationsUnlessExplicitlyEnabled(t *testing.T) {
+func TestShouldUseFutureEnvironmentFlagBehavior_RecordsDeprecationsUnlessExplicitlyEnabled(t *testing.T) {
 	tests := []struct {
 		name             string
 		flagArguments    []string
@@ -312,7 +312,7 @@ func TestShouldPersistEnvironmentVariables_RecordsDeprecationsUnlessExplicitlyEn
 			cmd := &cli.Command{
 				Name: "test", Flags: commonPlanFlags(),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					require.Equal(t, tt.persistVariables, shouldPersistEnvironmentVariables(cmd, buildLogger))
+					require.Equal(t, tt.persistVariables, shouldUseFutureEnvironmentFlagBehavior(cmd, buildLogger))
 					return nil
 				},
 			}

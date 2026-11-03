@@ -341,7 +341,8 @@ func GenerateConfigFromOptions(options *GenerateBuildPlanOptions) *c.Config {
 		config.Deploy.StartCmd = options.StartCommand
 	}
 
-	config.Variables = options.Variables
+	// keep CLI variables above root defaults and clone the map so config edits cannot mutate the caller's options
+	config.Variables = maps.Clone(options.Variables)
 
 	return config
 }
