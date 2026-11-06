@@ -264,6 +264,8 @@ func (b *MiseStepBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions) er
 		})
 		aptStep.Caches = options.Caches.GetAptCaches()
 		aptStep.Secrets = []string{}
+		// apply CLI and root config variables so supporting apt installs honor settings such as HTTP_PROXY
+		maps.Copy(aptStep.Variables, options.GlobalVariables)
 
 		p.Steps = append(p.Steps, *aptStep)
 		baseLayer = plan.NewStepLayer(aptStep.Name)

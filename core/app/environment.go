@@ -1,3 +1,8 @@
+// environment inputs for loading configuration and guiding provider planning
+//
+// - Variables combines CLI variables, CLI secrets, and root config variables for planning
+// - Secrets tracks CLI secrets and stays shared when updated Variables maps are created
+// - step and runtime environments are represented separately in the generated build plan
 package app
 
 import (
@@ -25,13 +30,31 @@ func NewEnvironment(buildSecrets *map[string]string) *Environment {
 	return &Environment{Variables: *buildSecrets, Secrets: *buildSecrets}
 }
 
-// clone planning variables with overrides while sharing the original build secrets
+// copy the environment with variable overrides while sharing the original secrets
 //
 // Variables={"MODE": "dev"}, overrides={"MODE": "prod", "EMPTY": ""}
 // -> Variables={"MODE": "prod", "EMPTY": ""}, Secrets unchanged
 func (e *Environment) WithVariables(variableOverrides map[string]string) *Environment {
 	mergedVariables := maps.Collect(maps.All(e.Variables))
 	maps.Copy(mergedVariables, variableOverrides)
+	return &Environment{Variables: mergedVariables, Secrets: e.Secrets}
+}
+
+// add variables to the environment without overwriting existing configuration
+//
+// - callers supply railpack.json's top-level variables, such as RAILPACK_NODE_VERSION
+// - existing CLI variables and CLI secrets take precedence over root config variables
+// - root config variables do not become secrets
+// - nil defaults are allowed and preserve existing values
+//
+// Variables={"MODE": "cli", "EMPTY": ""}, defaults={"MODE": "root", "EMPTY": "root", "TZ": "UTC"}
+// -> Variables={"MODE": "cli", "EMPTY": "", "TZ": "UTC"}, Secrets unchanged
+func (e *Environment) WithVariableDefaults(variableDefaults map[string]string) *Environment {
+	mergedVariables := maps.Collect(maps.All(variableDefaults))
+
+	// input variables do not win against existing variables
+	maps.Copy(mergedVariables, e.Variables)
+
 	return &Environment{Variables: mergedVariables, Secrets: e.Secrets}
 }
 

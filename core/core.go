@@ -87,8 +87,8 @@ func GenerateBuildPlan(app *app.App, env *app.Environment, options *GenerateBuil
 		return failedBuildResult(logger, err)
 	}
 
-	// global variables also configure provider detection and tool version selection
-	env = env.WithVariables(config.Variables)
+	// add root config or CLI variables (e.g. RAILPACK_NODE_VERSION)
+	env = env.WithVariableDefaults(config.Variables)
 
 	ctx, err := generate.NewGenerateContext(app, env, config, logger)
 	if err != nil {
@@ -224,8 +224,8 @@ func GetConfig(app *app.App, env *app.Environment, options *GenerateBuildPlanOpt
 		return nil, err
 	}
 
-	// read RAILPACK_* settings after applying root defaults and CLI variable overrides
-	env = env.WithVariables(fileConfig.Variables).WithVariables(options.Variables)
+	// apply CLI variables and CLI secrets ahead of root config variables when reading RAILPACK_* settings
+	env = env.WithVariableDefaults(fileConfig.Variables).WithVariables(options.Variables)
 	environmentConfig := GenerateConfigFromEnvironment(env)
 
 	// later configs override earlier values, except secret names which accumulate across sources

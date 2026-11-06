@@ -111,6 +111,7 @@ func (b *CommandStepBuilder) Name() string {
 	return b.DisplayName
 }
 
+// consumes the builder, transferring its state into the generated plan
 func (b *CommandStepBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions) error {
 	step := plan.NewStep(b.DisplayName)
 
@@ -121,7 +122,7 @@ func (b *CommandStepBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions)
 	step.Variables = b.Variables
 	step.Secrets = b.Secrets
 
-	// global variables override provider defaults; scoped variables are applied to the finished plan
+	// apply CLI and root config variables over provider variables before applying step variables
 	maps.Copy(step.Variables, options.GlobalVariables)
 
 	p.Steps = append(p.Steps, *step)

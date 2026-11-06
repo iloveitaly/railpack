@@ -164,7 +164,7 @@ func (c *GenerateContext) ResolvePackages() (map[string]*resolver.ResolvedPackag
 	return c.Resolver.ResolvePackages()
 }
 
-// Generate a build plan from the context
+// generates a build plan, consuming the context and its builders
 func (c *GenerateContext) Generate() (*plan.BuildPlan, map[string]*resolver.ResolvedPackage, error) {
 	c.applyConfig()
 
@@ -198,14 +198,15 @@ func (c *GenerateContext) Generate() (*plan.BuildPlan, map[string]*resolver.Reso
 	buildPlan.Caches = c.Caches.Caches
 	c.Deploy.Build(buildPlan, buildStepOptions)
 
-	// scoped configuration takes precedence over provider defaults and global variables
 	for i := range buildPlan.Steps {
 		step := &buildPlan.Steps[i]
 		if configuredStep := c.Config.Steps[step.Name]; configuredStep != nil {
+			// copy step variables last so they override provider/root/CLI values without dropping other generated variables
 			maps.Copy(step.Variables, configuredStep.Variables)
 		}
 	}
 	if c.Config.Deploy != nil {
+		// apply the same precedence to explicit deploy variables after the runtime defaults and globals are built
 		maps.Copy(buildPlan.Deploy.Variables, c.Config.Deploy.Variables)
 	}
 

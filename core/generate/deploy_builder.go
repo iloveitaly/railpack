@@ -63,6 +63,7 @@ func (b *DeployBuilder) AddAptPackages(packages []string) {
 	b.AptPackages = append(b.AptPackages, packages...)
 }
 
+// consumes the builder, transferring its state into the generated plan
 func (b *DeployBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions) {
 	baseLayer := b.Base
 
@@ -89,6 +90,6 @@ func (b *DeployBuilder) Build(p *plan.BuildPlan, options *BuildStepOptions) {
 	p.Deploy.Variables = b.Variables
 	p.Deploy.Paths = b.Paths
 
-	// global variables override provider runtime defaults; deploy.variables are applied to the finished plan
+	// apply CLI and root config variables over provider variables before applying deploy variables
 	maps.Copy(p.Deploy.Variables, options.GlobalVariables)
 }
